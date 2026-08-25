@@ -1,0 +1,105 @@
+.loginContainer {
+    display: flex;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-primary);
+    background-image:
+        radial-gradient(at 0% 0%, rgba(7, 86, 24, 0.03) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(7, 86, 24, 0.05) 0px, transparent 50%);
+    padding: 24px;
+}
+
+.loginCard {
+    width: 100%;
+    max-width: 440px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 48px 40px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.logoBox {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #075618, #0a7b22);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 25px rgba(7, 86, 24, 0.2);
+}
+
+.brand h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+}
+
+.brand p {
+    font-size: 15px;
+    color: var(--text-secondary);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.forgotPassword {
+    display: block;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-blue);
+    margin-top: 8px;
+    transition: opacity var(--transition-fast);
+}
+
+.forgotPassword:hover {
+    opacity: 0.8;
+}
+
+.loginBtn {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    font-size: 15px;
+    justify-content: center;
+    border-radius: var(--radius-md);
+}
+
+.footer {
+    margin-top: 32px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
