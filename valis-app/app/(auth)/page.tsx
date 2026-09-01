@@ -19,7 +19,6 @@ export default function LoginPage() {
                     />
                 </div>
 
-
                 <div className={styles.form}>
                     <div className={sharedStyles.formGroup}>
                         <label className={sharedStyles.formLabel}>E-mail</label>
