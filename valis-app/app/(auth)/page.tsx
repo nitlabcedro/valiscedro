@@ -15,7 +15,7 @@ export default function LoginPage() {
                         alt="Logo Cedro"
                         width={220}
                         height={80}
-                        style={{ marginBottom: "20px", objectFit: "contain" }}
+                        style={{ marginBottom: "0px", objectFit: "contain" }}
                     />
                 </div>
 
@@ -43,7 +43,7 @@ export default function LoginPage() {
 
                     <Link href="/dashboard" style={{ textDecoration: "none" }}>
                         <button className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`}>
-                            Acessar Sistema
+                            Acessar
                         </button>
                     </Link>
                 </div>

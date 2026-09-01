@@ -170,7 +170,6 @@ export default function ValidacaoPage() {
         </div>
       </div>
 
-      {/* New Validation Modal */}
       {showModal && (
         <div className={s.modalOverlay} onClick={() => setShowModal(false)}>
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
