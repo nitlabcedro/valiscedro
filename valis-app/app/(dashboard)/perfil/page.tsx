@@ -8,7 +8,7 @@ import p from "./perfil.module.css";
 export default function PerfilPage() {
   const [saved, setSaved] = useState(false);
   const [nome, setNome] = useState("André Pestana");
-  const [email, setEmail] = useState("andre.pestana@lab.com");
+  const [email, setEmail] = useState("andre.pestana@labcedro.com.br");
   const [senha, setSenha] = useState("");
 
   const handleSave = () => {

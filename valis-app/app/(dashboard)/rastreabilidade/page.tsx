@@ -195,7 +195,7 @@ export default function RastreabilidadePage() {
               </div>
               <div className={s.formGroup}>
                 <label className={s.formLabel}>Responsável Abertura</label>
-                <input className={s.formInput} placeholder="Nome do responsável" />
+                <input className={s.formInput} placeholder="André Pestana" />
               </div>
             </div>
 
