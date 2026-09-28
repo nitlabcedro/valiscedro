@@ -48,6 +48,10 @@ export default function LoginPage() {
                         </button>
                     </Link>
                 </div>
+
+                <p className={styles.footer}>
+                    Não tem uma conta? <Link href="/cadastro">Cadastre-se</Link>
+                </p>
             </div>
         </div>
     );

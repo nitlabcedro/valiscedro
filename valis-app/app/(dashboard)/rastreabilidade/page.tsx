@@ -7,6 +7,9 @@ import {
   HiOutlinePencilSquare,
   HiOutlineTrash,
   HiOutlineEye,
+  HiOutlineCheck,
+  HiOutlinePaperAirplane,
+  HiOutlineBookOpen,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 
@@ -142,6 +145,8 @@ export default function RastreabilidadePage() {
                       <button className={s.iconBtn} onClick={() => setShowDetail(r)} title="Ver detalhes"><HiOutlineEye /></button>
                       <button className={s.iconBtn} title="Editar"><HiOutlinePencilSquare /></button>
                       <button className={s.iconBtn} title="Excluir"><HiOutlineTrash /></button>
+                      <button className={s.iconBtn} title="Finalizar"><HiOutlineCheck /></button>
+                      <button className={s.iconBtn} title="Abertura"><HiOutlineBookOpen /></button>
                     </div>
                   </td>
                 </tr>

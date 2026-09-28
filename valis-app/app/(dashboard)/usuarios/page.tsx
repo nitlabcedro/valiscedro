@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   HiOutlinePlus,
   HiOutlineMagnifyingGlass,
@@ -9,40 +10,40 @@ import {
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 
+type Cargo = "Técnico" | "Bioquímico" | "Coordenador";
+
 interface Usuario {
   id: string;
   nome: string;
   email: string;
-  perfil: "Administrador" | "Coordenador" | "Operador";
+  cargo: Cargo;
   criadoEm: string;
 }
 
 const mockUsers: Usuario[] = [
-  { id: "USR-001", nome: "André Pestana", email: "andre.pestana@lab.com", perfil: "Administrador", criadoEm: "2026-01-01" },
-  { id: "USR-002", nome: "Maria Silva", email: "maria.silva@lab.com", perfil: "Coordenador", criadoEm: "2026-01-15" },
-  { id: "USR-003", nome: "Carlos Ribeiro", email: "carlos.ribeiro@lab.com", perfil: "Operador", criadoEm: "2026-02-10" },
-  { id: "USR-004", nome: "Ana Lima", email: "ana.lima@lab.com", perfil: "Operador", criadoEm: "2026-03-01" },
-  { id: "USR-005", nome: "Pedro Santos", email: "pedro.santos@lab.com", perfil: "Coordenador", criadoEm: "2026-04-20" },
+  { id: "USR-001", nome: "André Pestana", email: "andre.pestana@lab.com", cargo: "Coordenador", criadoEm: "2026-01-01" },
+  { id: "USR-002", nome: "Maria Silva", email: "maria.silva@lab.com", cargo: "Bioquímico", criadoEm: "2026-01-15" },
+  { id: "USR-003", nome: "Carlos Ribeiro", email: "carlos.ribeiro@lab.com", cargo: "Técnico", criadoEm: "2026-02-10" },
+  { id: "USR-004", nome: "Ana Lima", email: "ana.lima@lab.com", cargo: "Técnico", criadoEm: "2026-03-01" },
+  { id: "USR-005", nome: "Pedro Santos", email: "pedro.santos@lab.com", cargo: "Bioquímico", criadoEm: "2026-04-20" },
 ];
 
-function getPerfilBadge(perfil: string) {
-  switch (perfil) {
-    case "Administrador": return s.badgeRed;
+function getCargoBadge(cargo: Cargo) {
+  switch (cargo) {
     case "Coordenador": return s.badgePurple;
-    case "Operador": return s.badgeBlue;
-    default: return s.badge;
+    case "Bioquímico": return s.badgeBlue;
+    case "Técnico": return s.badgeGreen;
   }
 }
 
 export default function UsuariosPage() {
   const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
 
   const filtered = mockUsers.filter(
     (u) =>
       u.nome.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.perfil.toLowerCase().includes(search.toLowerCase())
+      u.cargo.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -53,16 +54,16 @@ export default function UsuariosPage() {
           <p>Gerencie os usuários e permissões do sistema</p>
         </div>
         <div className={s.headerActions}>
-          <button className={s.btnPrimary} onClick={() => setShowModal(true)}>
+          <Link href="/usuarios/novo" className={s.btnPrimary} style={{ textDecoration: "none" }}>
             <HiOutlinePlus /> Novo Usuário
-          </button>
+          </Link>
         </div>
       </div>
 
       <div className={s.card}>
         <div className={s.searchBar}>
           <HiOutlineMagnifyingGlass className={s.searchIcon} />
-          <input placeholder="Pesquisar por nome, e-mail ou perfil..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input placeholder="Pesquisar por nome, e-mail ou cargo..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
         <div className={s.tableWrapper}>
@@ -72,7 +73,7 @@ export default function UsuariosPage() {
                 <th>ID</th>
                 <th>Nome</th>
                 <th>E-mail</th>
-                <th>Perfil</th>
+                <th>Cargo</th>
                 <th>Criado Em</th>
                 <th>Ações</th>
               </tr>
@@ -102,7 +103,7 @@ export default function UsuariosPage() {
                     </div>
                   </td>
                   <td style={{ color: "var(--text-secondary)" }}>{u.email}</td>
-                  <td><span className={getPerfilBadge(u.perfil)}>{u.perfil}</span></td>
+                  <td><span className={getCargoBadge(u.cargo)}>{u.cargo}</span></td>
                   <td style={{ color: "var(--text-secondary)" }}>{u.criadoEm}</td>
                   <td>
                     <div style={{ display: "flex", gap: 4 }}>
@@ -117,41 +118,6 @@ export default function UsuariosPage() {
         </div>
       </div>
 
-      {/* New User Modal */}
-      {showModal && (
-        <div className={s.modalOverlay} onClick={() => setShowModal(false)}>
-          <div className={s.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={s.modalTitle}>Novo Usuário</h2>
-            <div className={s.formGrid}>
-              <div className={s.formGroup}>
-                <label className={s.formLabel}>Nome</label>
-                <input className={s.formInput} placeholder="Nome completo" />
-              </div>
-              <div className={s.formGroup}>
-                <label className={s.formLabel}>E-mail</label>
-                <input className={s.formInput} type="email" placeholder="email@lab.com" />
-              </div>
-              <div className={s.formGroup}>
-                <label className={s.formLabel}>Senha</label>
-                <input className={s.formInput} type="password" placeholder="••••••••" />
-              </div>
-              <div className={s.formGroup}>
-                <label className={s.formLabel}>Perfil</label>
-                <select className={s.formSelect}>
-                  <option>Selecione...</option>
-                  <option>Operador</option>
-                  <option>Coordenador</option>
-                  <option>Administrador</option>
-                </select>
-              </div>
-            </div>
-            <div className={s.formActions}>
-              <button className={s.btnSecondary} onClick={() => setShowModal(false)}>Cancelar</button>
-              <button className={s.btnPrimary} onClick={() => setShowModal(false)}>Criar Usuário</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

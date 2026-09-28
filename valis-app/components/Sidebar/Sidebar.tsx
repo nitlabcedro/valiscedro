@@ -60,7 +60,7 @@ export default function Sidebar() {
           <div key={group.section}>
             <div className={styles.navSection}>{group.section}</div>
             {group.items.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;
               return (
                 <Link
@@ -87,6 +87,10 @@ export default function Sidebar() {
             <div className={styles.userRole}>Administrador</div>
           </div>
         </div>
+        <Link href="/" className={`${styles.navItem} ${styles.logout}`}>
+          <span className={styles.navIcon}><HiOutlineArrowRightOnRectangle /></span>
+          <span className={styles.navText}>Sair</span>
+        </Link>
       </div>
     </aside>
   );

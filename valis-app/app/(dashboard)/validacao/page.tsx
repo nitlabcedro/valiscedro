@@ -200,11 +200,6 @@ export default function ValidacaoPage() {
                 <input className={s.formInput} placeholder="Ex: 10%" />
               </div>
             </div>
-            <div className={s.formGroup} style={{ marginTop: 20 }}>
-              <label className={s.formLabel}>Observações</label>
-              <textarea className={s.formTextarea} placeholder="Observações adicionais..." />
-            </div>
-
             <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Lote</h3>
             <div className={s.formGrid}>
               <div className={s.formGroup}><label className={s.formLabel}>Número do Lote</label><input className={s.formInput} placeholder="Ex: VL-2024-XX" /></div>
@@ -212,6 +207,30 @@ export default function ValidacaoPage() {
               <div className={s.formGroup}><label className={s.formLabel}>Abertura 1</label><input className={s.formInput} placeholder="Resultado" /></div>
               <div className={s.formGroup}><label className={s.formLabel}>Abertura 2</label><input className={s.formInput} placeholder="Resultado" /></div>
               <div className={s.formGroup}><label className={s.formLabel}>Abertura 3</label><input className={s.formInput} placeholder="Resultado" /></div>
+            </div>
+
+            <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Controle Interno</h3>
+            <div className={s.formGrid}>
+              <div className={s.formGroup}><label className={s.formLabel}>Data</label><input className={s.formInput} type="date" /></div>
+              <div className={s.formGroup}><label className={s.formLabel}>Lote do Controle</label><input className={s.formInput} placeholder="Ex: CTRL-2024-XX" /></div>
+            </div>
+
+            {["Nível 1 (Baixo)", "Nível 2 (Normal)", "Nível 3 (Alto)"].map((nivel) => (
+              <div key={nivel}>
+                <h4 style={{ fontSize: 13, fontWeight: 600, margin: "20px 0 12px", color: "var(--text-secondary)" }}>{nivel}</h4>
+                <div className={s.formGrid}>
+                  <div className={s.formGroup}><label className={s.formLabel}>Valor de Referência</label><input className={s.formInput} placeholder="Valor" /></div>
+                  <div className={s.formGroup}><label className={s.formLabel}>Erro Permitido</label><input className={s.formInput} placeholder="Ex: 10%" /></div>
+                  <div className={s.formGroup}><label className={s.formLabel}>Limite Mínimo</label><input className={s.formInput} placeholder="Min" /></div>
+                  <div className={s.formGroup}><label className={s.formLabel}>Limite Máximo</label><input className={s.formInput} placeholder="Max" /></div>
+                  <div className={s.formGroup}><label className={s.formLabel}>Valor Obtido</label><input className={s.formInput} placeholder="Resultado" /></div>
+                </div>
+              </div>
+            ))}
+
+            <div className={s.formGroup} style={{ marginTop: 20 }}>
+              <label className={s.formLabel}>Observações</label>
+              <textarea className={s.formTextarea} placeholder="Observações adicionais..." />
             </div>
 
             <div className={s.formActions}>

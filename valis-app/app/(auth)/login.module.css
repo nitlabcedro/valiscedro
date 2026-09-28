@@ -92,6 +92,21 @@
     color: var(--text-muted);
 }
 
+.footer a {
+    font-weight: 600;
+    color: var(--accent-blue);
+}
+
+.footer a:hover {
+    opacity: 0.8;
+}
+
+.formError {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent-red);
+}
+
 @keyframes slideUp {
     from {
         opacity: 0;
