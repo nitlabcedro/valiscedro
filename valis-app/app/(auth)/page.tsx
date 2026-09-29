@@ -10,13 +10,15 @@ export default function LoginPage() {
         <div className={styles.loginContainer}>
             <div className={styles.loginCard}>
                 <div className={styles.brand}>
+                    <div className={styles.logo}>
                     <Image
                         src="/logoCedro.svg"
                         alt="Logo Cedro"
-                        width={220}
-                        height={80}
-                        style={{ marginBottom: "0px", objectFit: "contain" }}
-                    />
+                            width={220}
+                            height={80}
+                            style={{ marginBottom: "0px", objectFit: "contain" }}
+                        />
+                    </div>
                 </div>
 
                 <div className={styles.form}>
@@ -29,13 +31,12 @@ export default function LoginPage() {
                         />
                     </div>
 
-
                     <div className={sharedStyles.formGroup}>
                         <label className={sharedStyles.formLabel}>Senha</label>
                         <input
                             className={sharedStyles.formInput}
                             type="password"
-                            placeholder="••••••••"
+                            placeholder="senha"
                         />
                         <Link href="#" className={styles.forgotPassword}>
                             Esqueceu a senha?

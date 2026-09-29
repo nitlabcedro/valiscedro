@@ -14,6 +14,8 @@ import {
   HiOutlineArrowRightOnRectangle,
 } from "react-icons/hi2";
 import styles from "./Sidebar.module.css";
+import logo from "@/public/logoCedro.svg";
+import Image from "next/image";
 
 const navItems = [
   {
@@ -49,8 +51,14 @@ export default function Sidebar() {
       <div className={styles.logo}>
         <div className={styles.logoIcon}>V</div>
         <div className={styles.logoText}>
-          <span className={styles.logoTitle}>Valis</span>
-          <span className={styles.logoSub}>Lab System</span>
+          <span className={styles.logoTitle}>
+            <Image src={logo} 
+            alt="Logo Cedro" 
+            width={10} 
+            height={10} 
+            style={{ marginBottom: "0px", objectFit: "contain" }}
+            />
+            </span>
         </div>
       </div>
 
