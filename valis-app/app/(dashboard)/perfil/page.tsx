@@ -1,20 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { HiOutlineCheckCircle } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import p from "./perfil.module.css";
+import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { apiSend, mensagemErro } from "@/lib/api";
+import { cargoLabel, emailValido, iniciais } from "@/lib/format";
+import Erro from "@/components/Erro";
+import type { Usuario } from "@/lib/types";
 
 export default function PerfilPage() {
-  const [saved, setSaved] = useState(false);
-  const [nome, setNome] = useState("André Pestana");
-  const [email, setEmail] = useState("andre.pestana@labcedro.com.br");
-  const [senha, setSenha] = useState("");
+  const { usuario, updateUsuario, sairLocal } = useAuth();
+  const [nome, setNome] = useState(usuario?.nome ?? "");
+  const [email, setEmail] = useState(usuario?.email ?? "");
+  const [salvo, setSalvo] = useState(false);
+  const [erroPerfil, setErroPerfil] = useState("");
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarNovaSenha, setConfirmarNovaSenha] = useState("");
+  const [erroSenha, setErroSenha] = useState("");
+  const [salvandoSenha, setSalvandoSenha] = useState(false);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
+  useEffect(() => {
+    if (!usuario) return;
+    setNome(usuario.nome);
+    setEmail(usuario.email);
+  }, [usuario]);
+
+  async function salvarPerfil(e: FormEvent) {
+    e.preventDefault();
+    if (!nome.trim() || !email.trim()) {
+      setErroPerfil("Preencha nome e e-mail.");
+      return;
+    }
+    if (!emailValido(email)) {
+      setErroPerfil("Informe um e-mail válido.");
+      return;
+    }
+    setErroPerfil("");
+    setSalvandoPerfil(true);
+    try {
+      const atualizado = await apiSend<Usuario>("PATCH", "/perfil", {
+        nome: nome.trim(),
+        email: email.trim(),
+      });
+      updateUsuario(atualizado);
+      setSalvo(true);
+      setTimeout(() => setSalvo(false), 3000);
+    } catch (erroCapturado) {
+      setErroPerfil(mensagemErro(erroCapturado));
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  }
+
+  async function salvarSenha(e: FormEvent) {
+    e.preventDefault();
+    if (!senhaAtual || !novaSenha || !confirmarNovaSenha) {
+      setErroSenha("Preencha a senha atual, a nova senha e a confirmação.");
+      return;
+    }
+    if (novaSenha.length < 6) {
+      setErroSenha("A nova senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (novaSenha !== confirmarNovaSenha) {
+      setErroSenha("A confirmação da senha não confere.");
+      return;
+    }
+    setErroSenha("");
+    setSalvandoSenha(true);
+    try {
+      await apiSend("PATCH", "/perfil/senha", { senhaAtual, novaSenha, confirmarNovaSenha });
+      sairLocal();
+    } catch (erroCapturado) {
+      setErroSenha(mensagemErro(erroCapturado));
+      setSalvandoSenha(false);
+    }
+  }
 
   return (
     <div className={p.profilePage}>
@@ -25,56 +90,73 @@ export default function PerfilPage() {
         </div>
       </div>
 
-      {/* Avatar Section */}
       <div className={p.avatarSection}>
-        <div className={p.avatarLarge}>AP</div>
+        <div className={p.avatarLarge}>{iniciais(nome)}</div>
         <div className={p.avatarInfo}>
           <h2>{nome}</h2>
           <p>{email}</p>
-          <span className={p.profileBadge}>Administrador</span>
+          {usuario && <span className={p.profileBadge}>{cargoLabel(usuario.cargo)}</span>}
         </div>
       </div>
 
-      {/* Edit Form */}
       <div className={s.card}>
         <h3 className={s.cardTitle}>Informações Pessoais</h3>
-
-        <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label className={s.formLabel}>Nome</label>
-            <input className={s.formInput} value={nome} onChange={(e) => setNome(e.target.value)} />
+        <form onSubmit={salvarPerfil}>
+          <div className={s.formGrid}>
+            <div className={s.formGroup}>
+              <label className={s.formLabel} htmlFor="nome">Nome</label>
+              <input id="nome" className={s.formInput} value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" />
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.formLabel} htmlFor="email">E-mail</label>
+              <input id="email" className={s.formInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            </div>
           </div>
-          <div className={s.formGroup}>
-            <label className={s.formLabel}>E-mail</label>
-            <input className={s.formInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Erro texto={erroPerfil} />
+          <div className={s.formActions}>
+            <button type="submit" className={s.btnPrimary} disabled={salvandoPerfil}>
+              {salvo ? <><HiOutlineCheckCircle /> Salvo!</> : salvandoPerfil ? "Salvando..." : "Salvar Alterações"}
+            </button>
           </div>
-        </div>
-
-        <div className={s.formActions}>
-          <button className={s.btnPrimary} onClick={handleSave}>
-            {saved ? <><HiOutlineCheckCircle /> Salvo!</> : "Salvar Alterações"}
-          </button>
-        </div>
+        </form>
       </div>
 
       <div className={s.card}>
         <h3 className={s.cardTitle}>Alterar Senha</h3>
-
-        <div className={s.formGrid}>
+        <form onSubmit={salvarSenha}>
           <div className={s.formGroup}>
-            <label className={s.formLabel}>Nova Senha</label>
-            <input className={s.formInput} type="password" placeholder="••••••••" value={senha} onChange={(e) => setSenha(e.target.value)} />
+            <label className={s.formLabel} htmlFor="senhaAtual">Senha atual</label>
+            <input id="senhaAtual" className={s.formInput} type="password" placeholder="••••••••" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoComplete="current-password" />
           </div>
-          <div className={s.formGroup}>
-            <label className={s.formLabel}>Confirmar Nova Senha</label>
-            <input className={s.formInput} type="password" placeholder="••••••••" />
+          <div className={s.formGrid} style={{ marginTop: 20 }}>
+            <div className={s.formGroup}>
+              <label className={s.formLabel} htmlFor="novaSenha">Nova Senha</label>
+              <input id="novaSenha" className={s.formInput} type="password" placeholder="••••••••" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} autoComplete="new-password" />
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.formLabel} htmlFor="confirmarNovaSenha">Confirmar Nova Senha</label>
+              <input id="confirmarNovaSenha" className={s.formInput} type="password" placeholder="••••••••" value={confirmarNovaSenha} onChange={(e) => setConfirmarNovaSenha(e.target.value)} autoComplete="new-password" />
+            </div>
           </div>
-        </div>
-
-        <div className={s.formActions}>
-          <button className={s.btnSecondary}>Cancelar</button>
-          <button className={s.btnPrimary}>Alterar Senha</button>
-        </div>
+          <Erro texto={erroSenha} />
+          <div className={s.formActions}>
+            <button
+              type="button"
+              className={s.btnSecondary}
+              onClick={() => {
+                setSenhaAtual("");
+                setNovaSenha("");
+                setConfirmarNovaSenha("");
+                setErroSenha("");
+              }}
+            >
+              Cancelar
+            </button>
+            <button type="submit" className={s.btnPrimary} disabled={salvandoSenha}>
+              {salvandoSenha ? "Alterando..." : "Alterar Senha"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

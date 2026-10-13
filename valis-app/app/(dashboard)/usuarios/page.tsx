@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   HiOutlinePlus,
   HiOutlineMagnifyingGlass,
@@ -9,42 +10,86 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
-
-type Cargo = "Técnico" | "Bioquímico" | "Coordenador";
-
-interface Usuario {
-  id: string;
-  nome: string;
-  email: string;
-  cargo: Cargo;
-  criadoEm: string;
-}
-
-const mockUsers: Usuario[] = [
-  { id: "USR-001", nome: "André Pestana", email: "andre.pestana@lab.com", cargo: "Coordenador", criadoEm: "2026-01-01" },
-  { id: "USR-002", nome: "Maria Silva", email: "maria.silva@lab.com", cargo: "Bioquímico", criadoEm: "2026-01-15" },
-  { id: "USR-003", nome: "Carlos Ribeiro", email: "carlos.ribeiro@lab.com", cargo: "Técnico", criadoEm: "2026-02-10" },
-  { id: "USR-004", nome: "Ana Lima", email: "ana.lima@lab.com", cargo: "Técnico", criadoEm: "2026-03-01" },
-  { id: "USR-005", nome: "Pedro Santos", email: "pedro.santos@lab.com", cargo: "Bioquímico", criadoEm: "2026-04-20" },
-];
-
-function getCargoBadge(cargo: Cargo) {
-  switch (cargo) {
-    case "Coordenador": return s.badgePurple;
-    case "Bioquímico": return s.badgeBlue;
-    case "Técnico": return s.badgeGreen;
-  }
-}
+import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
+import { apiGet, apiSend, mensagemErro } from "@/lib/api";
+import { useList } from "@/lib/use-list";
+import { buscaUsuario, cargoLabel, emailValido, formatDate, iniciais } from "@/lib/format";
+import { classeSituacao } from "@/lib/badges";
+import Erro from "@/components/Erro";
+import Pager from "@/components/Pager";
+import { CARGOS, type Cargo, type UsuarioLista } from "@/lib/types";
 
 export default function UsuariosPage() {
-  const [search, setSearch] = useState("");
+  const router = useRouter();
+  const { usuario, ready } = useAuth();
+  const permitido = ready && isCoordenador(usuario);
+  const list = useList<UsuarioLista>(permitido ? "/usuarios" : null, buscaUsuario);
+  const [editando, setEditando] = useState<UsuarioLista | null>(null);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [cargo, setCargo] = useState<Cargo | "">("");
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
 
-  const filtered = mockUsers.filter(
-    (u) =>
-      u.nome.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.cargo.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    if (ready && !isCoordenador(usuario)) router.replace("/dashboard");
+  }, [ready, usuario, router]);
+
+  async function abrirEdicao(id: string) {
+    setErro("");
+    try {
+      const res = await apiGet<UsuarioLista>(`/usuarios/${id}`);
+      setEditando(res.data);
+      setNome(res.data.nome);
+      setEmail(res.data.email);
+      setCargo(res.data.cargo);
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+    }
+  }
+
+  async function salvar(e: FormEvent) {
+    e.preventDefault();
+    if (!editando) return;
+    if (!nome.trim() || !email.trim() || !cargo) {
+      setErro("Preencha nome, e-mail e cargo.");
+      return;
+    }
+    if (!emailValido(email)) {
+      setErro("Informe um e-mail válido.");
+      return;
+    }
+    setSalvando(true);
+    setErro("");
+    try {
+      await apiSend("PATCH", `/usuarios/${editando.id}`, {
+        nome: nome.trim(),
+        email: email.trim(),
+        cargo,
+      });
+      setEditando(null);
+      list.reload();
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function excluir(id: string) {
+    if (!window.confirm("Excluir este usuário?")) return;
+    setErro("");
+    try {
+      await apiSend("DELETE", `/usuarios/${id}`);
+      list.reload();
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+    }
+  }
+
+  if (!permitido) return null;
+
+  const mensagem = erro || list.erro;
 
   return (
     <div className={s.page}>
@@ -60,10 +105,16 @@ export default function UsuariosPage() {
         </div>
       </div>
 
+      <Erro texto={editando ? "" : mensagem} />
+
       <div className={s.card}>
         <div className={s.searchBar}>
           <HiOutlineMagnifyingGlass className={s.searchIcon} />
-          <input placeholder="Pesquisar por nome, e-mail ou cargo..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input
+            placeholder="Pesquisar por nome, e-mail ou cargo..."
+            value={list.q}
+            onChange={(e) => list.setQ(e.target.value)}
+          />
         </div>
 
         <div className={s.tableWrapper}>
@@ -79,9 +130,23 @@ export default function UsuariosPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u) => (
+              {list.loading && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>
+                    Carregando...
+                  </td>
+                </tr>
+              )}
+              {!list.loading && list.items.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>
+                    Nenhum usuário encontrado
+                  </td>
+                </tr>
+              )}
+              {!list.loading && list.items.map((u) => (
                 <tr key={u.id}>
-                  <td style={{ fontWeight: 600 }}>{u.id}</td>
+                  <td style={{ fontWeight: 600 }}>{u.codigo}</td>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{
@@ -97,18 +162,18 @@ export default function UsuariosPage() {
                         color: "#fff",
                         flexShrink: 0,
                       }}>
-                        {u.nome.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                        {iniciais(u.nome)}
                       </div>
                       {u.nome}
                     </div>
                   </td>
                   <td style={{ color: "var(--text-secondary)" }}>{u.email}</td>
-                  <td><span className={getCargoBadge(u.cargo)}>{u.cargo}</span></td>
-                  <td style={{ color: "var(--text-secondary)" }}>{u.criadoEm}</td>
+                  <td><span className={classeSituacao(u.cargo)}>{cargoLabel(u.cargo)}</span></td>
+                  <td style={{ color: "var(--text-secondary)" }}>{formatDate(u.criadoEm)}</td>
                   <td>
                     <div style={{ display: "flex", gap: 4 }}>
-                      <button className={s.iconBtn} title="Editar"><HiOutlinePencilSquare /></button>
-                      <button className={s.iconBtn} title="Excluir"><HiOutlineTrash /></button>
+                      <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(u.id)}><HiOutlinePencilSquare /></button>
+                      <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(u.id)}><HiOutlineTrash /></button>
                     </div>
                   </td>
                 </tr>
@@ -116,8 +181,41 @@ export default function UsuariosPage() {
             </tbody>
           </table>
         </div>
+        <Pager page={list.page} pageSize={list.pageSize} total={list.total} onPage={list.setPage} />
       </div>
 
+      {editando && (
+        <div className={s.modalOverlay} onClick={() => setEditando(null)}>
+          <div className={s.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={s.modalTitle}>Editar {editando.codigo}</h2>
+            <form onSubmit={salvar}>
+              <div className={s.formGrid}>
+                <div className={s.formGroup}>
+                  <label className={s.formLabel} htmlFor="nome">Nome</label>
+                  <input id="nome" className={s.formInput} value={nome} onChange={(e) => setNome(e.target.value)} />
+                </div>
+                <div className={s.formGroup}>
+                  <label className={s.formLabel} htmlFor="email">E-mail</label>
+                  <input id="email" className={s.formInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+                <div className={s.formGroup}>
+                  <label className={s.formLabel} htmlFor="cargo">Cargo</label>
+                  <select id="cargo" className={s.formSelect} value={cargo} onChange={(e) => setCargo(e.target.value as Cargo)}>
+                    {CARGOS.map((c) => (
+                      <option key={c} value={c}>{cargoLabel(c)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <Erro texto={erro} />
+              <div className={s.formActions}>
+                <button type="button" className={s.btnSecondary} onClick={() => setEditando(null)}>Cancelar</button>
+                <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

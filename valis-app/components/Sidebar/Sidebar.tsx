@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -7,7 +8,6 @@ import {
   HiOutlineClipboardDocumentList,
   HiOutlineBeaker,
   HiOutlineChartBar,
-  HiOutlineCog6Tooth,
   HiOutlineUsers,
   HiOutlineUserCircle,
   HiOutlineBuildingOffice2,
@@ -16,22 +16,24 @@ import {
 import styles from "./Sidebar.module.css";
 import logo from "@/public/logoCedro.svg";
 import Image from "next/image";
+import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { cargoLabel, iniciais } from "@/lib/format";
 
 const navItems = [
   {
     section: "Principal",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: HiOutlineHome },
-      { label: "Rastreabilidade", href: "/rastreabilidade", icon: HiOutlineClipboardDocumentList, badge: 3 },
+      { label: "Rastreabilidade", href: "/rastreabilidade", icon: HiOutlineClipboardDocumentList },
       { label: "Validação", href: "/validacao", icon: HiOutlineBeaker },
-      { label: "Controle Interno", href: "/controle-interno", icon: HiOutlineChartBar },
+      { label: "Controle de Validação", href: "/conclusao", icon: HiOutlineChartBar },
     ],
   },
   {
     section: "Cadastros",
     items: [
       { label: "Cadastros Gerais", href: "/cadastros", icon: HiOutlineBuildingOffice2 },
-      { label: "Usuários", href: "/usuarios", icon: HiOutlineUsers },
+      { label: "Usuários", href: "/usuarios", icon: HiOutlineUsers, apenasCoordenador: true },
     ],
   },
   {
@@ -44,61 +46,70 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { usuario, logout } = useAuth();
+  const [saindo, setSaindo] = useState(false);
+  const coordenador = usuario?.cargo === "Coordenador";
+
+  async function handleSair() {
+    setSaindo(true);
+    await logout();
+  }
 
   return (
     <aside className={styles.sidebar}>
-      {/* Logo */}
       <div className={styles.logo}>
         <div className={styles.logoIcon}>V</div>
         <div className={styles.logoText}>
           <span className={styles.logoTitle}>
-            <Image src={logo} 
-            alt="Logo Cedro" 
-            width={10} 
-            height={10} 
-            style={{ marginBottom: "0px", objectFit: "contain" }}
+            <Image
+              src={logo}
+              alt="Logo Cedro"
+              width={10}
+              height={10}
+              style={{ marginBottom: "0px", objectFit: "contain" }}
             />
-            </span>
+          </span>
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className={styles.nav}>
-        {navItems.map((group) => (
-          <div key={group.section}>
-            <div className={styles.navSection}>{group.section}</div>
-            {group.items.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
-                >
-                  <span className={styles.navIcon}><Icon /></span>
-                  <span className={styles.navText}>{item.label}</span>
-                  {item.badge && <span className={styles.navBadge}>{item.badge}</span>}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+        {navItems.map((group) => {
+          const items = group.items.filter((item) => !("apenasCoordenador" in item) || coordenador);
+          if (items.length === 0) return null;
+          return (
+            <div key={group.section}>
+              <div className={styles.navSection}>{group.section}</div>
+              {items.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
+                  >
+                    <span className={styles.navIcon}><Icon /></span>
+                    <span className={styles.navText}>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
       </nav>
 
-      {/* User */}
       <div className={styles.footer}>
         <div className={styles.userCard}>
-          <div className={styles.avatar}>AP</div>
+          <div className={styles.avatar}>{iniciais(usuario?.nome ?? "")}</div>
           <div className={styles.userInfo}>
-            <div className={styles.userName}>André Pestana</div>
-            <div className={styles.userRole}>Administrador</div>
+            <div className={styles.userName}>{usuario?.nome}</div>
+            <div className={styles.userRole}>{usuario ? cargoLabel(usuario.cargo) : ""}</div>
           </div>
         </div>
-        <Link href="/" className={`${styles.navItem} ${styles.logout}`}>
+        <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={handleSair} disabled={saindo}>
           <span className={styles.navIcon}><HiOutlineArrowRightOnRectangle /></span>
           <span className={styles.navText}>Sair</span>
-        </Link>
+        </button>
       </div>
     </aside>
   );

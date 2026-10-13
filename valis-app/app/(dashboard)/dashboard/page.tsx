@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   HiOutlineClipboardDocumentList,
   HiOutlineBeaker,
@@ -12,45 +13,24 @@ import {
   HiOutlineMagnifyingGlass,
 } from "react-icons/hi2";
 import styles from "./page.module.css";
-import dynamic from 'next/dynamic';
-const DashboardChart = dynamic(() => import('@/components/DashboardChart/DashboardChart'), { ssr: false });
+import dynamic from "next/dynamic";
+import { apiBlob, apiGet, mensagemErro } from "@/lib/api";
+import { formatDate, formatQuando } from "@/lib/format";
+import Erro from "@/components/Erro";
+import type { DashboardDados } from "@/lib/types";
 
-const stats = [
-  { label: "Rastreabilidades", value: "148", change: "+12%", icon: HiOutlineClipboardDocumentList, color: "Blue" },
-  { label: "Validações", value: "63", change: "+8%", icon: HiOutlineBeaker, color: "Green" },
-  { label: "Usuários Ativos", value: "12", change: "+2", icon: HiOutlineUsers, color: "Yellow" },
-  { label: "Lotes Vencidos", value: "5", change: "-3", icon: HiOutlineExclamationTriangle, color: "Red" },
-];
-
-const lotStatus = [
-  { label: "Abertos", value: 34, icon: HiOutlineArchiveBox, bg: "rgba(59,130,246,0.12)", color: "var(--accent-blue)" },
-  { label: "Fechados", value: 89, icon: HiOutlineLockClosed, bg: "rgba(34,197,94,0.12)", color: "var(--accent-green)" },
-  { label: "Vencidos", value: 5, icon: HiOutlineExclamationTriangle, bg: "rgba(239,68,68,0.12)", color: "var(--accent-red)" },
-  { label: "Próx. Vencimento", value: 11, icon: HiOutlineClock, bg: "rgba(234,179,8,0.12)", color: "var(--accent-yellow)" },
-];
-
-const notifications = [
-  { type: "danger", title: "Lote RTG-2024-0087 vencido há 3 dias", time: "Há 2 horas" },
-  { type: "warning", title: "Lote VLD-2024-0142 vence em 5 dias", time: "Há 4 horas" },
-  { type: "warning", title: "Lote RTG-2024-0091 vence em 7 dias", time: "Há 6 horas" },
-  { type: "info", title: "Nova validação registrada por Maria S.", time: "Há 8 horas" },
-  { type: "info", title: "Controle interno aprovado — Glicose N2", time: "Hoje, 09:15" },
-];
-
-const recentActivity = [
-  { id: "RTG-0148", type: "Rastreabilidade", user: "André P.", date: "25/08/2026", status: "Aberto" },
-  { id: "VLD-0063", type: "Validação", user: "Maria S.", date: "24/08/2026", status: "Fechado" },
-  { id: "CIQ-0211", type: "Controle Interno", user: "Carlos R.", date: "24/08/2026", status: "Aprovado" },
-  { id: "RTG-0147", type: "Rastreabilidade", user: "Ana L.", date: "23/08/2026", status: "Fechado" },
-  { id: "VLD-0062", type: "Validação", user: "André P.", date: "23/08/2026", status: "Vencido" },
-];
+const DashboardChart = dynamic(() => import("@/components/DashboardChart/DashboardChart"), { ssr: false });
 
 function getStatusClass(status: string) {
   switch (status) {
     case "Aberto": return styles.badgeOpen;
     case "Fechado":
     case "Aprovado": return styles.badgeClosed;
-    case "Vencido": return styles.badgeExpired;
+    case "Vencido":
+    case "Rejeitado":
+    case "Com rejeição": return styles.badgeExpired;
+    case "Em andamento":
+    case "Próximo do vencimento": return styles.badgeWarning;
     default: return styles.badge;
   }
 }
@@ -64,87 +44,143 @@ function getDotClass(type: string) {
 }
 
 export default function DashboardPage() {
+  const [dados, setDados] = useState<DashboardDados | null>(null);
+  const [erro, setErro] = useState("");
+  const [exportando, setExportando] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    apiGet<DashboardDados>("/dashboard")
+      .then((res) => {
+        if (!cancelado) setDados(res.data);
+      })
+      .catch((erroCapturado: unknown) => {
+        if (!cancelado) setErro(mensagemErro(erroCapturado));
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  async function exportarPdf() {
+    setExportando(true);
+    setErro("");
+    try {
+      const blob = await apiBlob("/dashboard/export");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "dashboard-valis.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+    } finally {
+      setExportando(false);
+    }
+  }
+
+  const stats = [
+    { label: "Rastreabilidades", value: dados ? String(dados.totais.rastreabilidades) : "—", change: "", icon: HiOutlineClipboardDocumentList, color: "Blue" },
+    { label: "Validações", value: dados ? String(dados.totais.validacoes) : "—", change: "", icon: HiOutlineBeaker, color: "Green" },
+    { label: "Usuários Ativos", value: dados ? String(dados.totais.usuariosAtivos) : "—", change: "", icon: HiOutlineUsers, color: "Yellow" },
+    { label: "Lotes Vencidos", value: dados ? String(dados.totais.lotesVencidos) : "—", change: "", icon: HiOutlineExclamationTriangle, color: "Red" },
+  ];
+
+  const lotStatus = [
+    { label: "Abertos", value: dados?.lotes.abertos ?? 0, icon: HiOutlineArchiveBox, bg: "rgba(59,130,246,0.12)", color: "var(--accent-blue)" },
+    { label: "Fechados", value: dados?.lotes.fechados ?? 0, icon: HiOutlineLockClosed, bg: "rgba(34,197,94,0.12)", color: "var(--accent-green)" },
+    { label: "Vencidos", value: dados?.lotes.vencidos ?? 0, icon: HiOutlineExclamationTriangle, bg: "rgba(239,68,68,0.12)", color: "var(--accent-red)" },
+    { label: "Próx. Vencimento", value: dados?.lotes.proximoVencimento ?? 0, icon: HiOutlineClock, bg: "rgba(234,179,8,0.12)", color: "var(--accent-yellow)" },
+  ];
+
+  const notifications = dados?.notificacoes ?? [];
+  const recentActivity = dados?.atividades ?? [];
+
   return (
     <div className={styles.page}>
-      {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <h1>Dashboard</h1>
           <p>Visão geral do sistema laboratorial</p>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.btnSecondary}>
+          <button type="button" className={styles.btnSecondary}>
             <HiOutlineMagnifyingGlass /> Pesquisar
           </button>
-          <button className={styles.btnPrimary}>
-            <HiOutlineArrowDownTray /> Exportar PDF
+          <button type="button" className={styles.btnPrimary} onClick={exportarPdf} disabled={exportando}>
+            <HiOutlineArrowDownTray /> {exportando ? "Exportando..." : "Exportar PDF"}
           </button>
         </div>
       </div>
 
-      {/* Stat Cards */}
+      <Erro texto={erro} />
+
       <div className={styles.statsGrid}>
-        {stats.map((s) => {
-          const Icon = s.icon;
-          const cardClass = `${styles.statCard} ${styles[`statCard${s.color}` as keyof typeof styles]}`;
-          const iconClass = `${styles.statIcon} ${styles[`statIcon${s.color}` as keyof typeof styles]}`;
-          const isUp = s.change.startsWith("+");
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          const cardClass = `${styles.statCard} ${styles[`statCard${stat.color}` as keyof typeof styles]}`;
+          const iconClass = `${styles.statIcon} ${styles[`statIcon${stat.color}` as keyof typeof styles]}`;
+          const isUp = stat.change.startsWith("+");
           return (
-            <div key={s.label} className={cardClass}>
+            <div key={stat.label} className={cardClass}>
               <div className={styles.statHeader}>
                 <div className={iconClass}><Icon /></div>
-                <span className={isUp ? styles.statChangeUp : styles.statChangeDown}>
-                  {s.change}
-                </span>
+                {stat.change && (
+                  <span className={isUp ? styles.statChangeUp : styles.statChangeDown}>
+                    {stat.change}
+                  </span>
+                )}
               </div>
-              <div className={styles.statValue}>{s.value}</div>
-              <div className={styles.statLabel}>{s.label}</div>
+              <div className={styles.statValue}>{stat.value}</div>
+              <div className={styles.statLabel}>{stat.label}</div>
             </div>
           );
         })}
       </div>
 
-      {/* Lot Status */}
       <div className={styles.lotStatusGrid}>
-        {lotStatus.map((l) => {
-          const Icon = l.icon;
+        {lotStatus.map((lote) => {
+          const Icon = lote.icon;
           return (
-            <div key={l.label} className={styles.lotStatusCard}>
-              <div className={styles.lotStatusIcon} style={{ background: l.bg, color: l.color }}>
+            <div key={lote.label} className={styles.lotStatusCard}>
+              <div className={styles.lotStatusIcon} style={{ background: lote.bg, color: lote.color }}>
                 <Icon />
               </div>
               <div>
-                <div className={styles.lotStatusValue}>{l.value}</div>
-                <div className={styles.lotStatusLabel}>{l.label}</div>
+                <div className={styles.lotStatusValue}>{dados ? lote.value : "—"}</div>
+                <div className={styles.lotStatusLabel}>{lote.label}</div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Chart + Notifications */}
       <div className={styles.contentGrid}>
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <span className={styles.cardTitle}>Registros — Últimos 7 dias</span>
-            <span className={styles.cardAction}>Ver todos</span>
           </div>
           <div className={styles.chartWrapper}>
-            <DashboardChart />
+            <DashboardChart dias={dados?.ultimos7Dias} />
           </div>
         </div>
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <span className={styles.cardTitle}>Notificações</span>
-            <span className={styles.cardAction}>Ver todas</span>
           </div>
           <div className={styles.notifList}>
+            {notifications.length === 0 && (
+              <div className={styles.notifTime}>Nenhuma notificação</div>
+            )}
             {notifications.map((n, i) => (
-              <div key={i} className={styles.notifItem}>
-                <div className={`${styles.notifDot} ${getDotClass(n.type)}`} />
+              <div key={`${n.titulo}-${i}`} className={styles.notifItem}>
+                <div className={`${styles.notifDot} ${getDotClass(n.tipo)}`} />
                 <div className={styles.notifContent}>
-                  <div className={styles.notifTitle}>{n.title}</div>
-                  <div className={styles.notifTime}>{n.time}</div>
+                  <div className={styles.notifTitle}>{n.titulo}</div>
+                  <div className={styles.notifTime}>{formatQuando(n.quando)}</div>
                 </div>
               </div>
             ))}
@@ -152,11 +188,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Activity Table */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <span className={styles.cardTitle}>Atividades Recentes</span>
-          <span className={styles.cardAction}>Ver histórico completo</span>
         </div>
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
@@ -170,13 +204,20 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {recentActivity.map((a) => (
-                <tr key={a.id}>
-                  <td style={{ fontWeight: 600 }}>{a.id}</td>
-                  <td>{a.type}</td>
-                  <td>{a.user}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{a.date}</td>
-                  <td><span className={getStatusClass(a.status)}>{a.status}</span></td>
+              {recentActivity.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>
+                    Nenhuma atividade recente
+                  </td>
+                </tr>
+              )}
+              {recentActivity.map((atividade) => (
+                <tr key={atividade.id}>
+                  <td style={{ fontWeight: 600 }}>{atividade.id}</td>
+                  <td>{atividade.tipo}</td>
+                  <td>{atividade.usuario}</td>
+                  <td style={{ color: "var(--text-secondary)" }}>{formatDate(atividade.data)}</td>
+                  <td><span className={getStatusClass(atividade.status)}>{atividade.status}</span></td>
                 </tr>
               ))}
             </tbody>

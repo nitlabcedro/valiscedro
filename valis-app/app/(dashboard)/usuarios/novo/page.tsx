@@ -1,32 +1,54 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
-
-const cargos = ["Técnico", "Bioquímico", "Coordenador"] as const;
+import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
+import { apiSend, mensagemErro } from "@/lib/api";
+import { cargoLabel, emailValido } from "@/lib/format";
+import Erro from "@/components/Erro";
+import { CARGOS, type Cargo } from "@/lib/types";
 
 export default function NovoUsuarioPage() {
   const router = useRouter();
+  const { usuario, ready } = useAuth();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [cargo, setCargo] = useState("");
   const [erro, setErro] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  useEffect(() => {
+    if (ready && !isCoordenador(usuario)) router.replace("/dashboard");
+  }, [ready, usuario, router]);
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!nome.trim() || !email.trim() || !cargo) {
       setErro("Preencha nome, e-mail e cargo.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!emailValido(email)) {
       setErro("Informe um e-mail válido.");
       return;
     }
     setErro("");
-    router.push("/usuarios");
+    setEnviando(true);
+    try {
+      await apiSend("POST", "/usuarios", {
+        nome: nome.trim(),
+        email: email.trim(),
+        cargo: cargo as Cargo,
+      });
+      router.push("/usuarios");
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+      setEnviando(false);
+    }
   }
+
+  if (ready && !isCoordenador(usuario)) return null;
 
   return (
     <div className={s.page}>
@@ -72,24 +94,22 @@ export default function NovoUsuarioPage() {
                 onChange={(e) => setCargo(e.target.value)}
               >
                 <option value="">Selecione...</option>
-                {cargos.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                {CARGOS.map((c) => (
+                  <option key={c} value={c}>{cargoLabel(c)}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {erro && (
-            <p style={{ marginTop: 16, fontSize: 13, color: "var(--accent-red)", fontWeight: 500 }}>
-              {erro}
-            </p>
-          )}
+          <Erro texto={erro} />
 
           <div className={s.formActions}>
             <button type="button" className={s.btnSecondary} onClick={() => router.push("/usuarios")}>
               <HiOutlineArrowLeft /> Voltar
             </button>
-            <button type="submit" className={s.btnPrimary}>Criar Usuário</button>
+            <button type="submit" className={s.btnPrimary} disabled={enviando}>
+              {enviando ? "Criando..." : "Criar Usuário"}
+            </button>
           </div>
         </form>
       </div>

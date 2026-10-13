@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useMemo } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,9 +12,10 @@ import {
   Legend,
   Filler,
   BarController,
-  LineController
+  LineController,
 } from "chart.js";
 import { Chart } from "react-chartjs-2";
+import { formatDia } from "@/lib/format";
 
 ChartJS.register(
   CategoryScale,
@@ -29,44 +30,14 @@ ChartJS.register(
   LineController
 );
 
-const labels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+export interface DiaDashboard {
+  dia: string;
+  rastreabilidade: number;
+  validacao: number;
+  controleValidacao: number;
+}
 
-const data = {
-  labels,
-  datasets: [
-    {
-      type: "bar" as const,
-      label: "Rastreabilidade",
-      data: [12, 8, 15, 11, 14, 6, 3],
-      backgroundColor: "rgba(59, 130, 246, 0.5)",
-      borderRadius: 6,
-      barPercentage: 0.6,
-      order: 2,
-    },
-    {
-      type: "bar" as const,
-      label: "Validação",
-      data: [5, 7, 4, 9, 6, 3, 1],
-      backgroundColor: "rgba(139, 92, 246, 0.5)",
-      borderRadius: 6,
-      barPercentage: 0.6,
-      order: 3,
-    },
-    {
-      type: "line" as const,
-      label: "Controle Interno",
-      data: [8, 10, 12, 7, 11, 5, 2],
-      borderColor: "rgba(34, 197, 94, 0.8)",
-      backgroundColor: "rgba(34, 197, 94, 0.05)",
-      borderWidth: 2,
-      pointRadius: 4,
-      pointBackgroundColor: "rgba(34, 197, 94, 1)",
-      tension: 0.4,
-      fill: true,
-      order: 1,
-    },
-  ],
-};
+const VAZIO: DiaDashboard[] = [];
 
 const options = {
   responsive: true,
@@ -107,10 +78,48 @@ const options = {
       grid: { color: "rgba(0,0,0,0.04)" },
       ticks: { color: "rgba(0,0,0,0.4)", font: { size: 12, family: "Inter" } },
       border: { display: false },
+      beginAtZero: true,
     },
   },
 };
 
-export default function DashboardChart() {
+export default function DashboardChart({ dias = VAZIO }: { dias?: DiaDashboard[] }) {
+  const data = useMemo(() => ({
+    labels: dias.map((dia) => formatDia(dia.dia)),
+    datasets: [
+      {
+        type: "bar" as const,
+        label: "Rastreabilidade",
+        data: dias.map((dia) => dia.rastreabilidade),
+        backgroundColor: "rgba(59, 130, 246, 0.5)",
+        borderRadius: 6,
+        barPercentage: 0.6,
+        order: 2,
+      },
+      {
+        type: "bar" as const,
+        label: "Validação",
+        data: dias.map((dia) => dia.validacao),
+        backgroundColor: "rgba(139, 92, 246, 0.5)",
+        borderRadius: 6,
+        barPercentage: 0.6,
+        order: 3,
+      },
+      {
+        type: "line" as const,
+        label: "Controle de Validação",
+        data: dias.map((dia) => dia.controleValidacao),
+        borderColor: "rgba(34, 197, 94, 0.8)",
+        backgroundColor: "rgba(34, 197, 94, 0.05)",
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: "rgba(34, 197, 94, 1)",
+        tension: 0.4,
+        fill: true,
+        order: 1,
+      },
+    ],
+  }), [dias]);
+
   return <Chart type="bar" data={data} options={options} />;
 }

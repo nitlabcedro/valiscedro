@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { AuthProvider } from "@/components/AuthProvider/AuthProvider";
 import "./globals.css";
+
 
 
 const inter = Inter({
@@ -10,7 +12,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Valis — Sistema Laboratorial",
-  description: "Rastreabilidade, validação e controle interno da qualidade para laboratórios",
+  description: "Rastreabilidade, validação e controle de validação para laboratórios",
 };
 
 export default function RootLayout({
@@ -21,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

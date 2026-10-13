@@ -1,69 +1,83 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import {
   HiOutlinePlus,
   HiOutlineMagnifyingGlass,
   HiOutlinePencilSquare,
   HiOutlineTrash,
-  HiOutlineCpuChip,
-  HiOutlineBuildingOffice2,
-  HiOutlineDocumentText,
-  HiOutlineMapPin,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
+import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { apiSend, mensagemErro } from "@/lib/api";
+import { useList } from "@/lib/use-list";
+import { formatDate } from "@/lib/format";
+import Erro from "@/components/Erro";
+import Pager from "@/components/Pager";
+import type { CadastroTipo, CatalogoItem } from "@/lib/types";
 
-type CadastroType = "equipamentos" | "fabricantes" | "ntos" | "setores";
-
-interface CadastroItem {
-  id: string;
-  nome: string;
-  criadoEm: string;
-  criadoPor: string;
-}
-
-const mockCadastros: Record<CadastroType, CadastroItem[]> = {
-  equipamentos: [
-    { id: "EQP-001", nome: "Analisador AU680", criadoEm: "2026-01-15", criadoPor: "André P." },
-    { id: "EQP-002", nome: "Sysmex XN-1000", criadoEm: "2026-02-10", criadoPor: "Maria S." },
-    { id: "EQP-003", nome: "Architect i2000", criadoEm: "2026-03-20", criadoPor: "Carlos R." },
-    { id: "EQP-004", nome: "Cobas c501", criadoEm: "2026-04-05", criadoPor: "André P." },
-  ],
-  fabricantes: [
-    { id: "FAB-001", nome: "Beckman Coulter", criadoEm: "2026-01-10", criadoPor: "André P." },
-    { id: "FAB-002", nome: "Sysmex Corporation", criadoEm: "2026-01-10", criadoPor: "André P." },
-    { id: "FAB-003", nome: "Abbott Diagnostics", criadoEm: "2026-01-10", criadoPor: "André P." },
-    { id: "FAB-004", nome: "Roche Diagnostics", criadoEm: "2026-02-01", criadoPor: "Maria S." },
-  ],
-  ntos: [
-    { id: "NTO-001", nome: "NTO-LAB-001", criadoEm: "2026-01-05", criadoPor: "André P." },
-    { id: "NTO-002", nome: "NTO-LAB-002", criadoEm: "2026-01-05", criadoPor: "André P." },
-    { id: "NTO-003", nome: "NTO-LAB-003", criadoEm: "2026-03-15", criadoPor: "Carlos R." },
-  ],
-  setores: [
-    { id: "SET-001", nome: "Bioquímica", criadoEm: "2026-01-01", criadoPor: "André P." },
-    { id: "SET-002", nome: "Hematologia", criadoEm: "2026-01-01", criadoPor: "André P." },
-    { id: "SET-003", nome: "Imunologia", criadoEm: "2026-01-01", criadoPor: "André P." },
-    { id: "SET-004", nome: "Microbiologia", criadoEm: "2026-02-20", criadoPor: "Maria S." },
-  ],
-};
-
-const tabConfig: { key: CadastroType; label: string; icon: React.ComponentType }[] = [
-  { key: "equipamentos", label: "Equipamentos", icon: HiOutlineCpuChip },
-  { key: "fabricantes", label: "Fabricantes", icon: HiOutlineBuildingOffice2 },
-  { key: "ntos", label: "NTOs", icon: HiOutlineDocumentText },
-  { key: "setores", label: "Setores", icon: HiOutlineMapPin },
+const abas: { key: CadastroTipo; label: string; singular: string }[] = [
+  { key: "equipamentos", label: "Equipamentos", singular: "Equipamento" },
+  { key: "fabricantes", label: "Fabricantes", singular: "Fabricante" },
+  { key: "ntos", label: "NTOs", singular: "NTO" },
+  { key: "setores", label: "Setores", singular: "Setor" },
 ];
 
 export default function CadastrosPage() {
-  const [activeTab, setActiveTab] = useState<CadastroType>("equipamentos");
-  const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
+  const { usuario } = useAuth();
+  const podeGerenciar = usuario?.cargo === "Coordenador";
+  const [activeTab, setActiveTab] = useState<CadastroTipo>("equipamentos");
+  const list = useList<CatalogoItem>(`/cadastros/${activeTab}`);
+  const aba = abas.find((item) => item.key === activeTab) ?? abas[0];
+  const [modal, setModal] = useState<null | { id?: string; nome: string }>(null);
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
 
-  const items = mockCadastros[activeTab].filter((item) =>
-    item.nome.toLowerCase().includes(search.toLowerCase()) ||
-    item.id.toLowerCase().includes(search.toLowerCase())
-  );
+  function abrirNovo() {
+    setErro("");
+    setModal({ nome: "" });
+  }
+
+  function abrirEdicao(item: CatalogoItem) {
+    setErro("");
+    setModal({ id: item.id, nome: item.nome });
+  }
+
+  async function salvar(e: FormEvent) {
+    e.preventDefault();
+    if (!modal?.nome.trim()) {
+      setErro("Informe o nome.");
+      return;
+    }
+    setSalvando(true);
+    setErro("");
+    try {
+      if (modal.id) {
+        await apiSend("PATCH", `/cadastros/${activeTab}/${modal.id}`, { nome: modal.nome.trim() });
+      } else {
+        await apiSend("POST", `/cadastros/${activeTab}`, { nome: modal.nome.trim() });
+      }
+      setModal(null);
+      list.reload();
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function excluir(id: string) {
+    if (!window.confirm(`Excluir este ${aba.singular.toLowerCase()}?`)) return;
+    setErro("");
+    try {
+      await apiSend("DELETE", `/cadastros/${activeTab}/${id}`);
+      list.reload();
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+    }
+  }
+
+  const mensagem = modal ? "" : erro || list.erro;
 
   return (
     <div className={s.page}>
@@ -72,30 +86,42 @@ export default function CadastrosPage() {
           <h1>Cadastros Gerais</h1>
           <p>Gerencie equipamentos, fabricantes, NTOs e setores</p>
         </div>
-        <div className={s.headerActions}>
-          <button className={s.btnPrimary} onClick={() => setShowModal(true)}>
-            <HiOutlinePlus /> Novo Cadastro
-          </button>
-        </div>
+        {podeGerenciar && (
+          <div className={s.headerActions}>
+            <button type="button" className={s.btnPrimary} onClick={abrirNovo}>
+              <HiOutlinePlus /> Novo Cadastro
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Tabs */}
       <div className={s.tabs}>
-        {tabConfig.map((tab) => (
+        {abas.map((tab) => (
           <button
             key={tab.key}
+            type="button"
             className={activeTab === tab.key ? s.tabActive : s.tab}
-            onClick={() => { setActiveTab(tab.key); setSearch(""); }}
+            onClick={() => {
+              setActiveTab(tab.key);
+              list.setQ("");
+              setErro("");
+            }}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
+      <Erro texto={mensagem} />
+
       <div className={s.card}>
         <div className={s.searchBar}>
           <HiOutlineMagnifyingGlass className={s.searchIcon} />
-          <input placeholder={`Pesquisar ${tabConfig.find(t => t.key === activeTab)?.label.toLowerCase()}...`} value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input
+            placeholder={`Pesquisar ${aba.label.toLowerCase()}...`}
+            value={list.q}
+            onChange={(e) => list.setQ(e.target.value)}
+          />
         </div>
 
         <div className={s.tableWrapper}>
@@ -106,44 +132,69 @@ export default function CadastrosPage() {
                 <th>Nome</th>
                 <th>Criado Em</th>
                 <th>Criado Por</th>
-                <th>Ações</th>
+                {podeGerenciar && <th>Ações</th>}
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td style={{ fontWeight: 600 }}>{item.id}</td>
-                  <td>{item.nome}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{item.criadoEm}</td>
-                  <td>{item.criadoPor}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <button className={s.iconBtn} title="Editar"><HiOutlinePencilSquare /></button>
-                      <button className={s.iconBtn} title="Excluir"><HiOutlineTrash /></button>
-                    </div>
+              {list.loading && (
+                <tr>
+                  <td colSpan={podeGerenciar ? 5 : 4} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>
+                    Carregando...
                   </td>
+                </tr>
+              )}
+              {!list.loading && list.items.length === 0 && (
+                <tr>
+                  <td colSpan={podeGerenciar ? 5 : 4} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>
+                    Nenhum cadastro encontrado
+                  </td>
+                </tr>
+              )}
+              {!list.loading && list.items.map((item) => (
+                <tr key={item.id}>
+                  <td style={{ fontWeight: 600 }}>{item.codigo}</td>
+                  <td>{item.nome}</td>
+                  <td style={{ color: "var(--text-secondary)" }}>{formatDate(item.criadoEm)}</td>
+                  <td>{item.criadoPor || "—"}</td>
+                  {podeGerenciar && (
+                    <td>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(item)}><HiOutlinePencilSquare /></button>
+                        <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(item.id)}><HiOutlineTrash /></button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <Pager page={list.page} pageSize={list.pageSize} total={list.total} onPage={list.setPage} />
       </div>
 
-      {/* New Cadastro Modal */}
-      {showModal && (
-        <div className={s.modalOverlay} onClick={() => setShowModal(false)}>
+      {modal && (
+        <div className={s.modalOverlay} onClick={() => setModal(null)}>
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={s.modalTitle}>Novo {tabConfig.find(t => t.key === activeTab)?.label.slice(0, -1)}</h2>
-            <div className={s.formGrid}>
-              <div className={s.formGroup}>
-                <label className={s.formLabel}>Nome</label>
-                <input className={s.formInput} placeholder={`Nome do ${tabConfig.find(t => t.key === activeTab)?.label.slice(0, -1).toLowerCase()}`} />
+            <h2 className={s.modalTitle}>{modal.id ? "Editar" : "Novo"} {aba.singular}</h2>
+            <form onSubmit={salvar}>
+              <div className={s.formGrid}>
+                <div className={s.formGroup}>
+                  <label className={s.formLabel} htmlFor="nome">Nome</label>
+                  <input
+                    id="nome"
+                    className={s.formInput}
+                    placeholder={`Nome do ${aba.singular.toLowerCase()}`}
+                    value={modal.nome}
+                    onChange={(e) => setModal({ ...modal, nome: e.target.value })}
+                  />
+                </div>
               </div>
-            </div>
-            <div className={s.formActions}>
-              <button className={s.btnSecondary} onClick={() => setShowModal(false)}>Cancelar</button>
-              <button className={s.btnPrimary} onClick={() => setShowModal(false)}>Salvar</button>
-            </div>
+              <Erro texto={erro} />
+              <div className={s.formActions}>
+                <button type="button" className={s.btnSecondary} onClick={() => setModal(null)}>Cancelar</button>
+                <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

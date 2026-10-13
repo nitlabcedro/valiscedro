@@ -6,8 +6,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "../login.module.css";
-
-const cargos = ["Técnico", "Bioquímico", "Coordenador"] as const;
+import { apiSend, mensagemErro } from "@/lib/api";
+import { cargoLabel, emailValido } from "@/lib/format";
+import { CARGOS, type Cargo } from "@/lib/types";
 
 export default function CadastroPage() {
   const router = useRouter();
@@ -16,14 +17,15 @@ export default function CadastroPage() {
   const [cargo, setCargo] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!nome.trim() || !email.trim() || !cargo || !senha) {
       setErro("Preencha nome, e-mail, cargo e senha.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!emailValido(email)) {
       setErro("Informe um e-mail válido.");
       return;
     }
@@ -32,7 +34,20 @@ export default function CadastroPage() {
       return;
     }
     setErro("");
-    router.push("/");
+    setEnviando(true);
+    try {
+      await apiSend("POST", "/auth/cadastro", {
+        nome: nome.trim(),
+        email: email.trim(),
+        cargo: cargo as Cargo,
+        senha,
+      });
+      router.push("/");
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -84,8 +99,8 @@ export default function CadastroPage() {
               onChange={(e) => setCargo(e.target.value)}
             >
               <option value="">Selecione...</option>
-              {cargos.map((c) => (
-                <option key={c} value={c}>{c}</option>
+              {CARGOS.map((c) => (
+                <option key={c} value={c}>{cargoLabel(c)}</option>
               ))}
             </select>
           </div>
@@ -105,8 +120,8 @@ export default function CadastroPage() {
 
           {erro && <p className={styles.formError}>{erro}</p>}
 
-          <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`}>
-            Criar conta
+          <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando}>
+            {enviando ? "Criando..." : "Criar conta"}
           </button>
         </form>
 

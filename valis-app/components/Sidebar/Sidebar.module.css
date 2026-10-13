@@ -193,6 +193,8 @@
 
 .logout {
   margin-top: 4px;
+  width: 100%;
+  text-align: left;
 }
 
 .logout:hover {
