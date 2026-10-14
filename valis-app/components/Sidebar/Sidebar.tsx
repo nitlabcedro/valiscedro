@@ -17,29 +17,33 @@ import styles from "./Sidebar.module.css";
 import logo from "@/public/logoCedro.svg";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { cargoDe } from "@/lib/acesso";
 import { cargoLabel, iniciais } from "@/lib/format";
+import type { Cargo } from "@/lib/types";
 
-const navItems = [
+const gestao: Cargo[] = ["Coordenador"];
+
+const navItems: { section: string; items: { label: string; href: string; icon: typeof HiOutlineHome; cargos: Cargo[] }[] }[] = [
   {
     section: "Principal",
     items: [
-      { label: "Dashboard", href: "/dashboard", icon: HiOutlineHome },
-      { label: "Rastreabilidade", href: "/rastreabilidade", icon: HiOutlineClipboardDocumentList },
-      { label: "Validação", href: "/validacao", icon: HiOutlineBeaker },
-      { label: "Controle de Validação", href: "/conclusao", icon: HiOutlineChartBar },
+      { label: "Dashboard", href: "/dashboard", icon: HiOutlineHome, cargos: gestao },
+      { label: "Rastreabilidade", href: "/rastreabilidade", icon: HiOutlineClipboardDocumentList, cargos: ["Técnico"] },
+      { label: "Validação", href: "/validacao", icon: HiOutlineBeaker, cargos: ["Bioquímico"] },
+      { label: "Controle de Validação", href: "/conclusao", icon: HiOutlineChartBar, cargos: ["Bioquímico"] },
     ],
   },
   {
     section: "Cadastros",
     items: [
-      { label: "Cadastros Gerais", href: "/cadastros", icon: HiOutlineBuildingOffice2 },
-      { label: "Usuários", href: "/usuarios", icon: HiOutlineUsers, apenasCoordenador: true },
+      { label: "Cadastros Gerais", href: "/cadastros", icon: HiOutlineBuildingOffice2, cargos: gestao },
+      { label: "Usuários", href: "/usuarios", icon: HiOutlineUsers, cargos: gestao },
     ],
   },
   {
     section: "Conta",
     items: [
-      { label: "Meu Perfil", href: "/perfil", icon: HiOutlineUserCircle },
+      { label: "Meu Perfil", href: "/perfil", icon: HiOutlineUserCircle, cargos: ["Técnico", "Bioquímico", "Coordenador"] },
     ],
   },
 ];
@@ -48,7 +52,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { usuario, logout } = useAuth();
   const [saindo, setSaindo] = useState(false);
-  const coordenador = usuario?.cargo === "Coordenador";
+  const cargo = cargoDe(usuario?.cargo);
 
   async function handleSair() {
     setSaindo(true);
@@ -74,7 +78,7 @@ export default function Sidebar() {
 
       <nav className={styles.nav}>
         {navItems.map((group) => {
-          const items = group.items.filter((item) => !("apenasCoordenador" in item) || coordenador);
+          const items = group.items.filter((item) => cargo != null && item.cargos.includes(cargo));
           if (items.length === 0) return null;
           return (
             <div key={group.section}>

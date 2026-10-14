@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { podeAcessar, rotaInicial } from "@/lib/acesso";
 
 export default function SessionGate({ children }: { children: React.ReactNode }) {
   const { ready, usuario, erroSessao, sairLocal } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const permitido = !usuario || podeAcessar(usuario.cargo, pathname);
 
   useEffect(() => {
     if (ready && !usuario && !erroSessao) router.replace("/");
   }, [ready, usuario, erroSessao, router]);
+
+  useEffect(() => {
+    if (ready && usuario && !podeAcessar(usuario.cargo, pathname)) {
+      router.replace(rotaInicial(usuario.cargo));
+    }
+  }, [ready, usuario, pathname, router]);
 
   if (erroSessao) {
     return (
@@ -23,7 +32,7 @@ export default function SessionGate({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!ready || !usuario) {
+  if (!ready || !usuario || !permitido) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)" }}>
         Carregando...

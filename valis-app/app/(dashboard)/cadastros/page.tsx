@@ -8,7 +8,7 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
-import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
 import { apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
 import { formatDate } from "@/lib/format";
@@ -25,7 +25,7 @@ const abas: { key: CadastroTipo; label: string; singular: string }[] = [
 
 export default function CadastrosPage() {
   const { usuario } = useAuth();
-  const podeGerenciar = usuario?.cargo === "Coordenador";
+  const podeGerenciar = isCoordenador(usuario);
   const [activeTab, setActiveTab] = useState<CadastroTipo>("equipamentos");
   const list = useList<CatalogoItem>(`/cadastros/${activeTab}`);
   const aba = abas.find((item) => item.key === activeTab) ?? abas[0];

@@ -8,6 +8,7 @@ import sharedStyles from "@/styles/shared.module.css";
 import styles from "./login.module.css";
 import { apiSend, mensagemErro } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { rotaInicial } from "@/lib/acesso";
 import type { Usuario } from "@/lib/types";
 
 export default function LoginPage() {
@@ -32,7 +33,7 @@ export default function LoginPage() {
         senha,
       });
       setSession(data.token, data.usuario);
-      router.push("/dashboard");
+      router.push(rotaInicial(data.usuario.cargo));
     } catch (erroCapturado) {
       setErro(mensagemErro(erroCapturado));
     } finally {

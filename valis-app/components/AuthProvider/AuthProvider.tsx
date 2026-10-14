@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { cargoDe } from "@/lib/acesso";
 import { apiGet, apiSend, clearToken, getToken, mensagemErro, setToken } from "@/lib/api";
 import type { Usuario } from "@/lib/types";
 
@@ -104,5 +105,5 @@ export function useAuth() {
 }
 
 export function isCoordenador(usuario: Usuario | null) {
-  return usuario?.cargo === "Coordenador";
+  return cargoDe(usuario?.cargo) === "Coordenador";
 }

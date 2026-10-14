@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
+import { rotaInicial } from "@/lib/acesso";
 import { apiSend, mensagemErro } from "@/lib/api";
 import { cargoLabel, emailValido } from "@/lib/format";
 import Erro from "@/components/Erro";
@@ -20,7 +21,7 @@ export default function NovoUsuarioPage() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    if (ready && !isCoordenador(usuario)) router.replace("/dashboard");
+    if (ready && !isCoordenador(usuario)) router.replace(rotaInicial(usuario?.cargo));
   }, [ready, usuario, router]);
 
   async function handleSubmit(e: FormEvent) {

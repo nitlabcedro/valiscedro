@@ -11,6 +11,7 @@ import {
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
+import { rotaInicial } from "@/lib/acesso";
 import { apiGet, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
 import { buscaUsuario, cargoLabel, emailValido, formatDate, iniciais } from "@/lib/format";
@@ -32,7 +33,7 @@ export default function UsuariosPage() {
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    if (ready && !isCoordenador(usuario)) router.replace("/dashboard");
+    if (ready && !isCoordenador(usuario)) router.replace(rotaInicial(usuario?.cargo));
   }, [ready, usuario, router]);
 
   async function abrirEdicao(id: string) {
