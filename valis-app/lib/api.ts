@@ -1,4 +1,4 @@
-export const API_URL = "https://valis-api.192.168.160.102.sslip.io";
+export const API_URL = "https://api-valis.labcedro.com.br";
 export const PAGE_SIZE = 20;
 const TOKEN_KEY = "valis.token";
 
