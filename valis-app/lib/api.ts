@@ -1,4 +1,4 @@
-export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
+export const API_URL = "https://valis-api.192.168.160.102.sslip.io";
 export const PAGE_SIZE = 20;
 const TOKEN_KEY = "valis.token";
 
