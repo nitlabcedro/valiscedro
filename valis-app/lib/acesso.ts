@@ -31,6 +31,7 @@ export function podeAcessar(cargo: string | undefined | null, pathname: string) 
   if (!atual) return false;
   const regra = ROTAS.find((item) => pathname === item.prefixo || pathname.startsWith(`${item.prefixo}/`));
   if (!regra) return false;
+  if (atual === "Coordenador") return true;
   return regra.cargos.includes(atual);
 }
 

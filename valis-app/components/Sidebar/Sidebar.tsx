@@ -17,33 +17,30 @@ import styles from "./Sidebar.module.css";
 import logo from "@/public/logoCedro.svg";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
-import { cargoDe } from "@/lib/acesso";
+import { cargoDe, podeAcessar } from "@/lib/acesso";
 import { cargoLabel, iniciais } from "@/lib/format";
-import type { Cargo } from "@/lib/types";
 
-const gestao: Cargo[] = ["Coordenador"];
-
-const navItems: { section: string; items: { label: string; href: string; icon: typeof HiOutlineHome; cargos: Cargo[] }[] }[] = [
+const navItems: { section: string; items: { label: string; href: string; icon: typeof HiOutlineHome }[] }[] = [
   {
     section: "Principal",
     items: [
-      { label: "Dashboard", href: "/dashboard", icon: HiOutlineHome, cargos: gestao },
-      { label: "Rastreabilidade", href: "/rastreabilidade", icon: HiOutlineClipboardDocumentList, cargos: ["Técnico"] },
-      { label: "Validação", href: "/validacao", icon: HiOutlineBeaker, cargos: ["Bioquímico"] },
-      { label: "Controle de Validação", href: "/conclusao", icon: HiOutlineChartBar, cargos: ["Bioquímico"] },
+      { label: "Dashboard", href: "/dashboard", icon: HiOutlineHome },
+      { label: "Rastreabilidade", href: "/rastreabilidade", icon: HiOutlineClipboardDocumentList },
+      { label: "Validação", href: "/validacao", icon: HiOutlineBeaker },
+      { label: "Controle de Validação", href: "/conclusao", icon: HiOutlineChartBar },
     ],
   },
   {
     section: "Cadastros",
     items: [
-      { label: "Cadastros Gerais", href: "/cadastros", icon: HiOutlineBuildingOffice2, cargos: gestao },
-      { label: "Usuários", href: "/usuarios", icon: HiOutlineUsers, cargos: gestao },
+      { label: "Cadastros Gerais", href: "/cadastros", icon: HiOutlineBuildingOffice2 },
+      { label: "Usuários", href: "/usuarios", icon: HiOutlineUsers },
     ],
   },
   {
     section: "Conta",
     items: [
-      { label: "Meu Perfil", href: "/perfil", icon: HiOutlineUserCircle, cargos: ["Técnico", "Bioquímico", "Coordenador"] },
+      { label: "Meu Perfil", href: "/perfil", icon: HiOutlineUserCircle },
     ],
   },
 ];
@@ -78,7 +75,7 @@ export default function Sidebar() {
 
       <nav className={styles.nav}>
         {navItems.map((group) => {
-          const items = group.items.filter((item) => cargo != null && item.cargos.includes(cargo));
+          const items = group.items.filter((item) => podeAcessar(cargo, item.href));
           if (items.length === 0) return null;
           return (
             <div key={group.section}>
