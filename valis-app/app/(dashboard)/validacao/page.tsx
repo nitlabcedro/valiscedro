@@ -119,11 +119,13 @@ export default function ValidacaoPage() {
 
   function escolherAnalito(analitoId: string) {
     const analito = catalogos.analitos.find((item) => item.id === analitoId);
+    const erro = textoValor(analito?.erroTotalPermitido);
     setForm({
       ...form,
       analitoId,
       reagente: analito?.nome ?? "",
-      erroTotal: textoValor(analito?.erroTotalPermitido),
+      erroTotal: erro,
+      resultados: form.resultados.map((resultado) => ({ ...resultado, erroPermitido: erro })) as FormValidacao["resultados"],
     });
   }
 
@@ -200,7 +202,7 @@ export default function ValidacaoPage() {
     return form.resultados.map((resultado, indice) => ({
       ordem: (indice + 1) as 1 | 2 | 3,
       valorReferencia: numeroOuTexto(resultado.valorReferencia),
-      erroPermitido: resultado.erroPermitido.trim(),
+      erroPermitido: numeroOuTexto(resultado.erroPermitido),
       valorObtido: numeroOuTexto(resultado.valorObtido),
     }));
   }
@@ -452,7 +454,7 @@ export default function ValidacaoPage() {
                       <h4 style={{ fontSize: 13, fontWeight: 600, margin: "20px 0 12px", color: "var(--text-secondary)" }}>Resultado {indice + 1}</h4>
                       <div className={s.formGrid}>
                         <div className={s.formGroup}><label className={s.formLabel}>Valor de Referência</label><input className={s.formInput} placeholder="Valor" value={resultado.valorReferencia} onChange={(e) => atualizarResultado(indice, "valorReferencia", e.target.value)} /></div>
-                        <div className={s.formGroup}><label className={s.formLabel}>Erro Permitido</label><input className={s.formInput} placeholder="Ex: 10%" value={resultado.erroPermitido} onChange={(e) => atualizarResultado(indice, "erroPermitido", e.target.value)} /></div>
+                        <div className={s.formGroup}><label className={s.formLabel}>Erro Permitido</label><input className={s.formInput} value={resultado.erroPermitido} readOnly placeholder="Vem do erro total" /></div>
                         <div className={s.formGroup}><label className={s.formLabel}>Valor Obtido</label><input className={s.formInput} placeholder="Resultado" value={resultado.valorObtido} onChange={(e) => atualizarResultado(indice, "valorObtido", e.target.value)} /></div>
                       </div>
                     </div>
