@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   HiOutlinePlus,
   HiOutlineMagnifyingGlass,
@@ -28,7 +29,7 @@ import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
-import { TIPOS_CRITERIO, type TipoCriterio, type ValidacaoDetalhe, type ValidacaoLista } from "@/lib/types";
+import { TIPOS_CRITERIO, type RastreabilidadeDetalhe, type TipoCriterio, type ValidacaoDetalhe, type ValidacaoLista } from "@/lib/types";
 
 interface ResultadoForm {
   valorReferencia: string;
@@ -88,7 +89,27 @@ function celula(valor: string | null | undefined) {
   return valor ? valor : "—";
 }
 
-export default function ValidacaoPage() {
+interface OrigemRastreio {
+  codigo: string;
+  nto: string;
+  setor: string;
+  tipoMaterial: string;
+  abertura: string;
+  responsavel: string;
+}
+
+function CampoLeitura({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={s.formGroup}>
+      <label className={s.formLabel}>{label}</label>
+      <input className={s.formInput} value={value || "—"} readOnly />
+    </div>
+  );
+}
+
+function ValidacaoConteudo() {
+  const router = useRouter();
+  const rastreabilidadeId = useSearchParams().get("rastreabilidade");
   const list = useList<ValidacaoLista>("/validacoes");
   const catalogos = useCatalogos(["equipamentos", "fabricantes", "analitos"]);
   const [erro, setErro] = useState("");
@@ -98,6 +119,51 @@ export default function ValidacaoPage() {
   const [situacaoInicial, setSituacaoInicial] = useState("Em andamento");
   const [nomes, setNomes] = useState({ equipamento: "", fabricante: "" });
   const [detalhe, setDetalhe] = useState<ValidacaoDetalhe | null>(null);
+  const [origem, setOrigem] = useState<OrigemRastreio | null>(null);
+
+  useEffect(() => {
+    if (!rastreabilidadeId) return;
+    let cancelado = false;
+    setErro("");
+    apiGet<RastreabilidadeDetalhe>(`/rastreabilidades/${rastreabilidadeId}`)
+      .then((res) => {
+        if (cancelado) return;
+        const registro = res.data;
+        const lotes = registro.lotes ?? [];
+        const lote = lotes.find((item) => !item.fechamento) ?? lotes[lotes.length - 1];
+        setNomes({ equipamento: registro.equipamento, fabricante: registro.fabricante });
+        setSituacaoInicial("Em andamento");
+        setForm({
+          ...formVazio(),
+          equipamentoId: registro.equipamentoId,
+          fabricanteId: registro.fabricanteId,
+          numero: lote?.numero ?? "",
+          validade: dateInput(lote?.validade),
+        });
+        setOrigem({
+          codigo: registro.codigo,
+          nto: registro.nto,
+          setor: registro.setor,
+          tipoMaterial: registro.tipoMaterial,
+          abertura: lote?.abertura ?? "",
+          responsavel: lote?.responsavelAbertura ?? "",
+        });
+        setModal({});
+      })
+      .catch((erroCapturado) => {
+        if (cancelado) return;
+        setErro(mensagemErro(erroCapturado));
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [rastreabilidadeId]);
+
+  function fecharModal() {
+    setModal(null);
+    setOrigem(null);
+    if (rastreabilidadeId) router.replace("/validacao");
+  }
 
   useEffect(() => {
     if (!modal) return;
@@ -271,7 +337,7 @@ export default function ValidacaoPage() {
           ...(Object.keys(lote).length > 0 ? { lote } : {}),
         });
       }
-      setModal(null);
+      fecharModal();
       list.reload();
     } catch (erroCapturado) {
       setErro(mensagemErro(erroCapturado));
@@ -299,7 +365,7 @@ export default function ValidacaoPage() {
           <p>Registre e acompanhe as validações de reagentes e analitos</p>
         </div>
         <div className={s.headerActions}>
-          <button type="button" className={s.btnPrimary} onClick={() => { setErro(""); setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setModal({}); }}>
+          <button type="button" className={s.btnPrimary} onClick={() => { setErro(""); setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setModal({}); if (rastreabilidadeId) router.replace("/validacao"); }}>
             <HiOutlinePlus /> Nova Validação
           </button>
         </div>
@@ -361,10 +427,22 @@ export default function ValidacaoPage() {
       </div>
 
       {modal && (
-        <div className={s.modalOverlay} onClick={() => setModal(null)}>
+        <div className={s.modalOverlay} onClick={fecharModal}>
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
             <h2 className={s.modalTitle}>{modal.id ? `Editar ${modal.codigo}` : "Nova Validação"}</h2>
             <form onSubmit={salvar}>
+              {origem && !modal.id && (
+                <>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 16px", color: "var(--text-secondary)" }}>Rastreabilidade {origem.codigo}</h3>
+                  <div className={s.formGrid}>
+                    <CampoLeitura label="NTO" value={origem.nto} />
+                    <CampoLeitura label="Setor" value={origem.setor} />
+                    <CampoLeitura label="Material" value={origem.tipoMaterial} />
+                    <CampoLeitura label="Data de abertura" value={origem.abertura ? formatDate(origem.abertura) : ""} />
+                    <CampoLeitura label="Responsável pela abertura" value={origem.responsavel} />
+                  </div>
+                </>
+              )}
               <div className={s.formGrid}>
                 <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} />
                 <CatalogSelect
@@ -469,7 +547,7 @@ export default function ValidacaoPage() {
 
               <Erro texto={erro} />
               <div className={s.formActions}>
-                <button type="button" className={s.btnSecondary} onClick={() => setModal(null)}>Cancelar</button>
+                <button type="button" className={s.btnSecondary} onClick={fecharModal}>Cancelar</button>
                 <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Salvar Validação"}</button>
               </div>
             </form>
@@ -579,5 +657,13 @@ export default function ValidacaoPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ValidacaoPage() {
+  return (
+    <Suspense fallback={<div className={s.page}>Carregando...</div>}>
+      <ValidacaoConteudo />
+    </Suspense>
   );
 }

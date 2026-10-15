@@ -1,7 +1,7 @@
 export const CARGOS = ["Técnico", "Bioquímico", "Coordenador"] as const;
 export type Cargo = (typeof CARGOS)[number];
 
-export const TIPOS_MATERIAL = ["Reagente", "Controle", "Calibrador"] as const;
+export const TIPOS_MATERIAL = ["Reagente"] as const;
 export type TipoMaterial = (typeof TIPOS_MATERIAL)[number];
 
 export const TIPOS_CRITERIO = [

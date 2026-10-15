@@ -98,12 +98,37 @@ export function normalizarErroTotal(valor: string) {
   return valor.replace(/\s/g, "");
 }
 
+export function digitarErroTotal(valor: string) {
+  const limpo = valor.replace(/\./g, ",").replace(/[^\d,]/g, "");
+  const temVirgula = limpo.includes(",");
+  const [inteiroBruto, ...resto] = limpo.split(",");
+  const inteiro = inteiroBruto.replace(/\D/g, "").slice(0, 2);
+  if (!temVirgula) return inteiro;
+  const decimal = resto.join("").replace(/\D/g, "").slice(0, 2);
+  return `${inteiro},${decimal}`;
+}
+
+export function formatarErroTotal(valor: string | number | null | undefined) {
+  if (valor == null || valor === "") return "";
+  if (typeof valor === "number") {
+    if (!Number.isFinite(valor) || valor < 0 || valor >= 100) return "";
+    const [inteiro, decimal] = valor.toFixed(2).split(".");
+    return `${inteiro.padStart(2, "0")},${decimal}`;
+  }
+  const texto = String(valor).trim().replace(/\s/g, "").replace(".", ",");
+  const match = texto.match(/^(\d{1,2})(?:,(\d{0,2}))?$/);
+  if (!match) return "";
+  return `${match[1].padStart(2, "0")},${(match[2] ?? "").padEnd(2, "0")}`;
+}
+
 export function erroTotalPermitidoValido(valor: string) {
-  return /^\d+(?:[.,]\d+)?%?$/.test(normalizarErroTotal(valor));
+  return /^\d{2},\d{2}$/.test(valor);
 }
 
 export function rotuloAnalito(item: { nome: string; erroTotalPermitido?: string | number }) {
-  return item.erroTotalPermitido ? `${item.nome} (${item.erroTotalPermitido})` : item.nome;
+  if (item.erroTotalPermitido == null || item.erroTotalPermitido === "") return item.nome;
+  const erro = formatarErroTotal(item.erroTotalPermitido) || textoValor(item.erroTotalPermitido);
+  return `${item.nome} (${erro})`;
 }
 
 export function opcoesAnalito(

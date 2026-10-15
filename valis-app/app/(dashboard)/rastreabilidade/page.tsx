@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   HiOutlinePlus,
   HiOutlineMagnifyingGlass,
@@ -9,6 +10,7 @@ import {
   HiOutlineEye,
   HiOutlineCheck,
   HiOutlineBookOpen,
+  HiOutlineBeaker,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { apiGet, apiSend, mensagemErro } from "@/lib/api";
@@ -20,6 +22,7 @@ import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { cargoDe } from "@/lib/acesso";
 import { TIPOS_MATERIAL, type RastreabilidadeDetalhe, type RastreabilidadeLista, type TipoMaterial } from "@/lib/types";
 
 const formVazio = {
@@ -35,7 +38,10 @@ const formVazio = {
 };
 
 export default function RastreabilidadePage() {
+  const router = useRouter();
   const { usuario } = useAuth();
+  const cargo = cargoDe(usuario?.cargo);
+  const podeValidar = cargo === "Bioquímico" || cargo === "Coordenador";
   const list = useList<RastreabilidadeLista>("/rastreabilidades");
   const catalogos = useCatalogos(["equipamentos", "fabricantes", "ntos", "setores"]);
   const [erro, setErro] = useState("");
@@ -61,6 +67,10 @@ export default function RastreabilidadePage() {
   async function carregarDetalhe(id: string) {
     const res = await apiGet<RastreabilidadeDetalhe>(`/rastreabilidades/${id}`);
     return res.data;
+  }
+
+  function abrirValidacao(id: string) {
+    router.push(`/validacao?rastreabilidade=${encodeURIComponent(id)}`);
   }
 
   async function verDetalhe(id: string) {
@@ -292,7 +302,12 @@ export default function RastreabilidadePage() {
                 </tr>
               )}
               {!list.loading && list.items.map((r) => (
-                <tr key={r.id}>
+                <tr
+                  key={r.id}
+                  onClick={podeValidar ? () => abrirValidacao(r.id) : undefined}
+                  style={podeValidar ? { cursor: "pointer" } : undefined}
+                  title={podeValidar ? "Abrir validação" : undefined}
+                >
                   <td style={{ fontWeight: 600 }}>{r.codigo}</td>
                   <td>{r.nto}</td>
                   <td><span className={s.badgePurple}>{r.setor}</span></td>
@@ -301,8 +316,11 @@ export default function RastreabilidadePage() {
                   <td>{r.fabricante}</td>
                   <td><span className={s.badgeBlue}>{r.lotes}</span></td>
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(r.criadoEm)}</td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: "flex", gap: 4 }}>
+                      {podeValidar && (
+                        <button type="button" className={s.iconBtn} title="Validar" onClick={() => abrirValidacao(r.id)}><HiOutlineBeaker /></button>
+                      )}
                       <button type="button" className={s.iconBtn} onClick={() => verDetalhe(r.id)} title="Ver detalhes"><HiOutlineEye /></button>
                       <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(r.id)}><HiOutlinePencilSquare /></button>
                       <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(r.id)}><HiOutlineTrash /></button>

@@ -3,9 +3,9 @@ import type { Cargo } from "@/lib/types";
 const CARGOS_GESTAO: Cargo[] = ["Coordenador"];
 
 const ROTAS: { prefixo: string; cargos: Cargo[] }[] = [
-  { prefixo: "/rastreabilidade", cargos: ["Técnico"] },
+  { prefixo: "/rastreabilidade", cargos: ["Técnico", "Bioquímico"] },
   { prefixo: "/validacao", cargos: ["Bioquímico"] },
-  { prefixo: "/conclusao", cargos: ["Bioquímico"] },
+  { prefixo: "/conclusao", cargos: CARGOS_GESTAO },
   { prefixo: "/dashboard", cargos: CARGOS_GESTAO },
   { prefixo: "/cadastros", cargos: CARGOS_GESTAO },
   { prefixo: "/usuarios", cargos: CARGOS_GESTAO },
