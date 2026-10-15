@@ -11,7 +11,7 @@ export const TIPOS_CRITERIO = [
 ] as const;
 export type TipoCriterio = (typeof TIPOS_CRITERIO)[number];
 
-export type CadastroTipo = "equipamentos" | "fabricantes" | "ntos" | "setores";
+export type CadastroTipo = "equipamentos" | "fabricantes" | "ntos" | "setores" | "analitos";
 
 export interface Usuario {
   id: string;
@@ -31,6 +31,7 @@ export interface CatalogoItem {
   nome: string;
   criadoEm: string;
   criadoPor: string;
+  erroTotalPermitido?: string | number;
 }
 
 export interface LoteRastreabilidade {
@@ -105,6 +106,9 @@ export interface LoteValidacao {
 
 export interface ControleAninhado {
   data: string;
+  analitoId?: string;
+  analito?: string;
+  erroTotalPermitido?: string | number;
   loteControle: string;
   resultados: ResultadoControle[];
   status?: "Aprovado" | "Com rejeição" | string;
@@ -138,7 +142,9 @@ export interface ControleValidacao {
   data: string;
   equipamentoId: string;
   equipamento: string;
+  analitoId: string;
   analito: string;
+  erroTotalPermitido?: string | number;
   loteControle: string;
   observacoes?: string | null;
   criadoEm: string;

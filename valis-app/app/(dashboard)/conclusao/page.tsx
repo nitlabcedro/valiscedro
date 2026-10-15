@@ -13,7 +13,7 @@ import s from "@/styles/shared.module.css";
 import { apiGet, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
 import { useCatalogos } from "@/lib/use-catalogos";
-import { dateInput, formatDate, numeroOuTexto, rotuloStatus, textoValor } from "@/lib/format";
+import { dateInput, formatDate, numeroOuTexto, opcoesAnalito, rotuloStatus, textoValor } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
@@ -29,7 +29,9 @@ interface ResultadoForm {
 interface FormControle {
   data: string;
   equipamentoId: string;
-  analito: string;
+  analitoId: string;
+  analitoNome: string;
+  erroTotalPermitido: string;
   loteControle: string;
   observacoes: string;
   resultados: [ResultadoForm, ResultadoForm, ResultadoForm];
@@ -43,7 +45,9 @@ function formVazio(): FormControle {
   return {
     data: "",
     equipamentoId: "",
-    analito: "",
+    analitoId: "",
+    analitoNome: "",
+    erroTotalPermitido: "",
     loteControle: "",
     observacoes: "",
     resultados: [resultadoVazio(), resultadoVazio(), resultadoVazio()],
@@ -54,7 +58,9 @@ function doRegistro(item: ControleValidacao): FormControle {
   return {
     data: dateInput(item.data),
     equipamentoId: item.equipamentoId,
-    analito: item.analito,
+    analitoId: item.analitoId ?? "",
+    analitoNome: item.analito ?? "",
+    erroTotalPermitido: textoValor(item.erroTotalPermitido),
     loteControle: item.loteControle,
     observacoes: item.observacoes ?? "",
     resultados: [1, 2, 3].map((ordem) => {
@@ -70,7 +76,7 @@ function doRegistro(item: ControleValidacao): FormControle {
 
 export default function ConclusaoPage() {
   const list = useList<ControleValidacao>("/controles-validacao");
-  const catalogos = useCatalogos(["equipamentos"]);
+  const catalogos = useCatalogos(["equipamentos", "analitos"]);
   const [form, setForm] = useState<FormControle>(formVazio);
   const [editId, setEditId] = useState<string | null>(null);
   const [codigo, setCodigo] = useState("");
@@ -108,7 +114,7 @@ export default function ConclusaoPage() {
     return {
       data: form.data,
       equipamentoId: form.equipamentoId,
-      analito: form.analito.trim(),
+      analitoId: form.analitoId,
       loteControle: form.loteControle.trim(),
       ...(editId || form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
       resultados: form.resultados.map((resultado, indice) => ({
@@ -122,7 +128,7 @@ export default function ConclusaoPage() {
 
   async function salvar(e: FormEvent) {
     e.preventDefault();
-    if (!form.data || !form.equipamentoId || !form.analito.trim() || !form.loteControle.trim()) {
+    if (!form.data || !form.equipamentoId || !form.analitoId || !form.loteControle.trim()) {
       setErro("Preencha data, equipamento, analito e lote do controle.");
       return;
     }
@@ -199,7 +205,8 @@ export default function ConclusaoPage() {
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{c.codigo} — {c.analito}</div>
                 <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
-                  {c.equipamento} · Lote {c.loteControle} · {formatDate(c.data)} · por {c.criadoPor}
+                  {c.equipamento} · Lote {c.loteControle}
+                  {c.erroTotalPermitido ? ` · Erro total ${c.erroTotalPermitido}` : ""} · {formatDate(c.data)} · por {c.criadoPor}
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -261,10 +268,20 @@ export default function ConclusaoPage() {
                   <input className={s.formInput} type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
                 </div>
                 <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} />
-                <div className={s.formGroup}>
-                  <label className={s.formLabel}>Analito / Reagente</label>
-                  <input className={s.formInput} placeholder="Ex: Glicose" value={form.analito} onChange={(e) => setForm({ ...form, analito: e.target.value })} />
-                </div>
+                <CatalogSelect
+                  label="Analito"
+                  value={form.analitoId}
+                  onChange={(analitoId) => {
+                    const analito = catalogos.analitos.find((item) => item.id === analitoId);
+                    setForm({
+                      ...form,
+                      analitoId,
+                      analitoNome: analito?.nome ?? "",
+                      erroTotalPermitido: textoValor(analito?.erroTotalPermitido),
+                    });
+                  }}
+                  items={opcoesAnalito(catalogos.analitos, { id: form.analitoId, nome: form.analitoNome, erroTotalPermitido: form.erroTotalPermitido })}
+                />
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Lote do Controle</label>
                   <input className={s.formInput} placeholder="Ex: CTRL-2024-XX" value={form.loteControle} onChange={(e) => setForm({ ...form, loteControle: e.target.value })} />

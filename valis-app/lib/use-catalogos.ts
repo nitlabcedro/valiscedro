@@ -9,6 +9,7 @@ const VAZIO: Record<CadastroTipo, CatalogoItem[]> = {
   fabricantes: [],
   ntos: [],
   setores: [],
+  analitos: [],
 };
 
 export function useCatalogos(tipos: CadastroTipo[]) {

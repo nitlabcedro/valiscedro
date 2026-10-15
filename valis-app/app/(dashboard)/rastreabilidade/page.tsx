@@ -19,6 +19,7 @@ import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
+import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { TIPOS_MATERIAL, type RastreabilidadeDetalhe, type RastreabilidadeLista, type TipoMaterial } from "@/lib/types";
 
 const formVazio = {
@@ -34,6 +35,7 @@ const formVazio = {
 };
 
 export default function RastreabilidadePage() {
+  const { usuario } = useAuth();
   const list = useList<RastreabilidadeLista>("/rastreabilidades");
   const catalogos = useCatalogos(["equipamentos", "fabricantes", "ntos", "setores"]);
   const [erro, setErro] = useState("");
@@ -241,7 +243,11 @@ export default function RastreabilidadePage() {
           <p>Gerencie a rastreabilidade de lotes do laboratório</p>
         </div>
         <div className={s.headerActions}>
-          <button type="button" className={s.btnPrimary} onClick={() => { setErro(""); setForm(formVazio); setCriando(true); }}>
+          <button type="button" className={s.btnPrimary} onClick={() => {
+            setErro("");
+            setForm({ ...formVazio, responsavelAbertura: usuario?.nome ?? "" });
+            setCriando(true);
+          }}>
             <HiOutlinePlus /> Novo Registro
           </button>
         </div>
@@ -301,7 +307,17 @@ export default function RastreabilidadePage() {
                       <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(r.id)}><HiOutlinePencilSquare /></button>
                       <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(r.id)}><HiOutlineTrash /></button>
                       <button type="button" className={s.iconBtn} title="Finalizar" onClick={() => abrirFinalizar(r)}><HiOutlineCheck /></button>
-                      <button type="button" className={s.iconBtn} title="Abertura" onClick={() => { setErro(""); setAbertura({ id: r.id, codigo: r.codigo, numero: "", validade: "", data: "", responsavel: "" }); }}><HiOutlineBookOpen /></button>
+                      <button type="button" className={s.iconBtn} title="Abertura" onClick={() => {
+                        setErro("");
+                        setAbertura({
+                          id: r.id,
+                          codigo: r.codigo,
+                          numero: "",
+                          validade: "",
+                          data: "",
+                          responsavel: usuario?.nome ?? "",
+                        });
+                      }}><HiOutlineBookOpen /></button>
                     </div>
                   </td>
                 </tr>

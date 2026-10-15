@@ -1,7 +1,7 @@
-import type { LoteRastreabilidade } from "@/lib/types";
+import type { CatalogoItem, LoteRastreabilidade } from "@/lib/types";
 
 export function cargoLabel(cargo: string) {
-  return cargo === "Coordenador" ? "Administrador" : cargo;
+  return cargo === "Coordenador" ? "Coordenador" : cargo;
 }
 
 export function buscaUsuario(q: string) {
@@ -92,6 +92,36 @@ export function triplePreenchido(valor: [string, string, string] | null | undefi
 export function tripleOuUndefined(valor: [string, string, string]): [string, string, string] | undefined {
   if (valor.every((item) => !item.trim())) return undefined;
   return [valor[0].trim(), valor[1].trim(), valor[2].trim()];
+}
+
+export function normalizarErroTotal(valor: string) {
+  return valor.replace(/\s/g, "");
+}
+
+export function erroTotalPermitidoValido(valor: string) {
+  return /^\d+(?:[.,]\d+)?%?$/.test(normalizarErroTotal(valor));
+}
+
+export function rotuloAnalito(item: { nome: string; erroTotalPermitido?: string | number }) {
+  return item.erroTotalPermitido ? `${item.nome} (${item.erroTotalPermitido})` : item.nome;
+}
+
+export function opcoesAnalito(
+  items: CatalogoItem[],
+  atual?: { id: string; nome: string; erroTotalPermitido?: string | number } | null,
+) {
+  const opcoes = items.map((item) => ({ ...item, nome: rotuloAnalito(item) }));
+  if (atual?.id && atual.nome && !items.some((item) => item.id === atual.id)) {
+    opcoes.unshift({
+      id: atual.id,
+      codigo: "",
+      nome: rotuloAnalito(atual),
+      criadoEm: "",
+      criadoPor: "",
+      erroTotalPermitido: atual.erroTotalPermitido,
+    });
+  }
+  return opcoes;
 }
 
 export function emailValido(email: string) {

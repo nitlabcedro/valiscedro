@@ -17,6 +17,7 @@ import {
   formatDate,
   idPorNome,
   numeroOuTexto,
+  opcoesAnalito,
   rotuloStatus,
   textoValor,
   tripleOuUndefined,
@@ -51,6 +52,7 @@ interface FormValidacao {
   posAnalise: [string, string, string];
   situacao: string;
   controleData: string;
+  analitoId: string;
   loteControle: string;
   resultados: [ResultadoForm, ResultadoForm, ResultadoForm];
 }
@@ -76,6 +78,7 @@ function formVazio(): FormValidacao {
     posAnalise: tripleVazio(),
     situacao: "Em andamento",
     controleData: "",
+    analitoId: "",
     loteControle: "",
     resultados: [resultadoVazio(), resultadoVazio(), resultadoVazio()],
   };
@@ -87,7 +90,7 @@ function celula(valor: string | null | undefined) {
 
 export default function ValidacaoPage() {
   const list = useList<ValidacaoLista>("/validacoes");
-  const catalogos = useCatalogos(["equipamentos", "fabricantes"]);
+  const catalogos = useCatalogos(["equipamentos", "fabricantes", "analitos"]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [form, setForm] = useState<FormValidacao>(formVazio);
@@ -101,10 +104,28 @@ export default function ValidacaoPage() {
     setForm((atual) => {
       const equipamentoId = atual.equipamentoId || idPorNome(catalogos.equipamentos, nomes.equipamento);
       const fabricanteId = atual.fabricanteId || idPorNome(catalogos.fabricantes, nomes.fabricante);
-      if (equipamentoId === atual.equipamentoId && fabricanteId === atual.fabricanteId) return atual;
-      return { ...atual, equipamentoId, fabricanteId };
+      const analitoId = atual.analitoId || idPorNome(catalogos.analitos, atual.reagente);
+      const analito = catalogos.analitos.find((item) => item.id === analitoId);
+      const erroTotal = atual.erroTotal || textoValor(analito?.erroTotalPermitido);
+      if (
+        equipamentoId === atual.equipamentoId
+        && fabricanteId === atual.fabricanteId
+        && analitoId === atual.analitoId
+        && erroTotal === atual.erroTotal
+      ) return atual;
+      return { ...atual, equipamentoId, fabricanteId, analitoId, erroTotal };
     });
-  }, [catalogos.equipamentos, catalogos.fabricantes, modal, nomes]);
+  }, [catalogos.analitos, catalogos.equipamentos, catalogos.fabricantes, modal, nomes]);
+
+  function escolherAnalito(analitoId: string) {
+    const analito = catalogos.analitos.find((item) => item.id === analitoId);
+    setForm({
+      ...form,
+      analitoId,
+      reagente: analito?.nome ?? "",
+      erroTotal: textoValor(analito?.erroTotalPermitido),
+    });
+  }
 
   function atualizarAbertura(indice: number, valor: string) {
     const abertura = [...form.abertura] as [string, string, string];
@@ -158,6 +179,7 @@ export default function ValidacaoPage() {
         posAnalise: triplePreenchido(lote?.posAnalise),
         situacao: lote?.situacao || registro.situacao || "Em andamento",
         controleData: dateInput(registro.controle?.data),
+        analitoId: registro.controle?.analitoId ?? "",
         loteControle: registro.controle?.loteControle ?? "",
         resultados: [0, 1, 2].map((indice) => {
           const resultado = registro.controle?.resultados?.find((item) => item.ordem === indice + 1);
@@ -186,7 +208,7 @@ export default function ValidacaoPage() {
   async function salvar(e: FormEvent) {
     e.preventDefault();
     if (!form.equipamentoId || !form.reagente.trim() || !form.fabricanteId || !form.tipoCriterio || !form.referencia.trim() || !form.erroTotal.trim()) {
-      setErro("Preencha equipamento, reagente, fabricante, critério, referência e erro total.");
+      setErro("Preencha equipamento, analito, fabricante, critério, referência e erro total.");
       return;
     }
 
@@ -199,8 +221,8 @@ export default function ValidacaoPage() {
           setSalvando(false);
           return;
         }
-        if (!form.controleData || !form.loteControle.trim() || form.resultados.some((item) => !item.valorReferencia.trim() || !item.erroPermitido.trim() || !item.valorObtido.trim())) {
-          setErro("Preencha a data, o lote do controle e os três resultados.");
+        if (!form.controleData || !form.analitoId || !form.loteControle.trim() || form.resultados.some((item) => !item.valorReferencia.trim() || !item.erroPermitido.trim() || !item.valorObtido.trim())) {
+          setErro("Preencha a data, o analito, o lote do controle e os três resultados.");
           setSalvando(false);
           return;
         }
@@ -210,7 +232,7 @@ export default function ValidacaoPage() {
           fabricanteId: form.fabricanteId,
           tipoCriterio: form.tipoCriterio,
           referencia: form.referencia.trim(),
-          erroTotal: form.erroTotal.trim(),
+          erroTotal: numeroOuTexto(form.erroTotal),
           ...(form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
           lote: {
             numero: form.numero.trim(),
@@ -219,6 +241,7 @@ export default function ValidacaoPage() {
           },
           controle: {
             data: form.controleData,
+            analitoId: form.analitoId,
             loteControle: form.loteControle.trim(),
             resultados: resultadosPayload(),
           },
@@ -241,7 +264,7 @@ export default function ValidacaoPage() {
           fabricanteId: form.fabricanteId,
           tipoCriterio: form.tipoCriterio,
           referencia: form.referencia.trim(),
-          erroTotal: form.erroTotal.trim(),
+          erroTotal: numeroOuTexto(form.erroTotal),
           ...(form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
           ...(Object.keys(lote).length > 0 ? { lote } : {}),
         });
@@ -342,10 +365,12 @@ export default function ValidacaoPage() {
             <form onSubmit={salvar}>
               <div className={s.formGrid}>
                 <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} />
-                <div className={s.formGroup}>
-                  <label className={s.formLabel}>Reagente / Analito</label>
-                  <input className={s.formInput} placeholder="Ex: Glicose" value={form.reagente} onChange={(e) => setForm({ ...form, reagente: e.target.value })} />
-                </div>
+                <CatalogSelect
+                  label="Analito"
+                  value={form.analitoId}
+                  onChange={escolherAnalito}
+                  items={opcoesAnalito(catalogos.analitos, form.analitoId ? { id: form.analitoId, nome: form.reagente, erroTotalPermitido: form.erroTotal } : null)}
+                />
                 <CatalogSelect label="Fabricante" value={form.fabricanteId} onChange={(fabricanteId) => setForm({ ...form, fabricanteId })} items={catalogos.fabricantes} />
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Tipo de Critério</label>
@@ -360,7 +385,7 @@ export default function ValidacaoPage() {
                 </div>
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Erro Total Permitido</label>
-                  <input className={s.formInput} placeholder="Ex: 10%" value={form.erroTotal} onChange={(e) => setForm({ ...form, erroTotal: e.target.value })} />
+                  <input className={s.formInput} value={form.erroTotal} readOnly placeholder="Selecione o analito" />
                 </div>
               </div>
 
@@ -505,6 +530,12 @@ export default function ValidacaoPage() {
                 <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 12px", color: "var(--text-secondary)" }}>Controle de validação</h3>
                 <div className={s.formGrid}>
                   <div className={s.formGroup}><span className={s.formLabel}>Data</span><span>{formatDate(detalhe.controle.data)}</span></div>
+                  {detalhe.controle.analito && (
+                    <div className={s.formGroup}><span className={s.formLabel}>Analito</span><span>{detalhe.controle.analito}</span></div>
+                  )}
+                  {detalhe.controle.erroTotalPermitido && (
+                    <div className={s.formGroup}><span className={s.formLabel}>Erro total permitido</span><span>{detalhe.controle.erroTotalPermitido}</span></div>
+                  )}
                   <div className={s.formGroup}><span className={s.formLabel}>Lote</span><span>{detalhe.controle.loteControle}</span></div>
                   {detalhe.controle.status && (
                     <div className={s.formGroup}><span className={s.formLabel}>Status</span><span>{detalhe.controle.status}</span></div>
