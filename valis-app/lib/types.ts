@@ -59,6 +59,7 @@ export interface RastreabilidadeLista {
   equipamento: string;
   tipoMaterial: string;
   fabricante: string;
+  analito?: string;
   lotes: number;
   criadoEm: string;
   criadoPor: string;
@@ -76,6 +77,9 @@ export interface RastreabilidadeDetalhe {
   tipoMaterial: TipoMaterial;
   fabricanteId: string;
   fabricante: string;
+  analitoId?: string;
+  analito?: string;
+  erroTotalPermitido?: string | number;
   criadoEm: string;
   criadoPor: string;
   lotes: LoteRastreabilidade[];

@@ -94,8 +94,24 @@ interface OrigemRastreio {
   nto: string;
   setor: string;
   tipoMaterial: string;
+  analito: string;
   abertura: string;
   responsavel: string;
+}
+
+function comAnalito(
+  atual: FormValidacao,
+  analito: { id?: string; nome?: string; erroTotalPermitido?: string | number } | null | undefined,
+) {
+  if (!analito) return atual;
+  const analitoId = analito.id || atual.analitoId;
+  const reagente = analito.nome || atual.reagente;
+  const erroTotal = atual.erroTotal || textoValor(analito.erroTotalPermitido);
+  const resultados = atual.resultados.map((resultado) => ({
+    ...resultado,
+    erroPermitido: resultado.erroPermitido || erroTotal,
+  })) as FormValidacao["resultados"];
+  return { ...atual, analitoId, reagente, erroTotal, resultados };
 }
 
 function CampoLeitura({ label, value }: { label: string; value: string }) {
@@ -133,18 +149,23 @@ function ValidacaoConteudo() {
         const lote = lotes.find((item) => !item.fechamento) ?? lotes[lotes.length - 1];
         setNomes({ equipamento: registro.equipamento, fabricante: registro.fabricante });
         setSituacaoInicial("Em andamento");
-        setForm({
+        setForm(comAnalito({
           ...formVazio(),
           equipamentoId: registro.equipamentoId,
           fabricanteId: registro.fabricanteId,
           numero: lote?.numero ?? "",
           validade: dateInput(lote?.validade),
-        });
+        }, {
+          id: registro.analitoId,
+          nome: registro.analito,
+          erroTotalPermitido: registro.erroTotalPermitido,
+        }));
         setOrigem({
           codigo: registro.codigo,
           nto: registro.nto,
           setor: registro.setor,
           tipoMaterial: registro.tipoMaterial,
+          analito: registro.analito ?? "",
           abertura: lote?.abertura ?? "",
           responsavel: lote?.responsavelAbertura ?? "",
         });
@@ -172,14 +193,19 @@ function ValidacaoConteudo() {
       const fabricanteId = atual.fabricanteId || idPorNome(catalogos.fabricantes, nomes.fabricante);
       const analitoId = atual.analitoId || idPorNome(catalogos.analitos, atual.reagente);
       const analito = catalogos.analitos.find((item) => item.id === analitoId);
-      const erroTotal = atual.erroTotal || textoValor(analito?.erroTotalPermitido);
+      const proximo = comAnalito(
+        { ...atual, equipamentoId, fabricanteId, analitoId },
+        analito ? { id: analito.id, nome: analito.nome, erroTotalPermitido: analito.erroTotalPermitido } : null,
+      );
       if (
-        equipamentoId === atual.equipamentoId
-        && fabricanteId === atual.fabricanteId
-        && analitoId === atual.analitoId
-        && erroTotal === atual.erroTotal
+        proximo.equipamentoId === atual.equipamentoId
+        && proximo.fabricanteId === atual.fabricanteId
+        && proximo.analitoId === atual.analitoId
+        && proximo.reagente === atual.reagente
+        && proximo.erroTotal === atual.erroTotal
+        && proximo.resultados.every((item, indice) => item.erroPermitido === atual.resultados[indice].erroPermitido)
       ) return atual;
-      return { ...atual, equipamentoId, fabricanteId, analitoId, erroTotal };
+      return proximo;
     });
   }, [catalogos.analitos, catalogos.equipamentos, catalogos.fabricantes, modal, nomes]);
 
@@ -438,6 +464,7 @@ function ValidacaoConteudo() {
                     <CampoLeitura label="NTO" value={origem.nto} />
                     <CampoLeitura label="Setor" value={origem.setor} />
                     <CampoLeitura label="Material" value={origem.tipoMaterial} />
+                    <CampoLeitura label="Analito" value={origem.analito} />
                     <CampoLeitura label="Data de abertura" value={origem.abertura ? formatDate(origem.abertura) : ""} />
                     <CampoLeitura label="Responsável pela abertura" value={origem.responsavel} />
                   </div>

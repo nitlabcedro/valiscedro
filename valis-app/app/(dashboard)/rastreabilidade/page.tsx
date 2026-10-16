@@ -31,6 +31,7 @@ const formVazio = {
   equipamentoId: "",
   tipoMaterial: "" as TipoMaterial | "",
   fabricanteId: "",
+  analitoId: "",
   numero: "",
   validade: "",
   abertura: "",
@@ -43,7 +44,7 @@ export default function RastreabilidadePage() {
   const cargo = cargoDe(usuario?.cargo);
   const podeValidar = cargo === "Bioquímico" || cargo === "Coordenador";
   const list = useList<RastreabilidadeLista>("/rastreabilidades");
-  const catalogos = useCatalogos(["equipamentos", "fabricantes", "ntos", "setores"]);
+  const catalogos = useCatalogos(["equipamentos", "fabricantes", "ntos", "setores", "analitos"]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [criando, setCriando] = useState(false);
@@ -93,6 +94,7 @@ export default function RastreabilidadePage() {
         equipamentoId: registro.equipamentoId,
         tipoMaterial: registro.tipoMaterial,
         fabricanteId: registro.fabricanteId,
+        analitoId: registro.analitoId ?? "",
       });
       setEditando({ id: registro.id, codigo: registro.codigo });
     } catch (erroCapturado) {
@@ -124,8 +126,8 @@ export default function RastreabilidadePage() {
 
   async function salvarNovo(e: FormEvent) {
     e.preventDefault();
-    if (!form.ntoId || !form.setorId || !form.equipamentoId || !form.tipoMaterial || !form.fabricanteId) {
-      setErro("Preencha NTO, setor, equipamento, material e fabricante.");
+    if (!form.ntoId || !form.setorId || !form.equipamentoId || !form.tipoMaterial || !form.fabricanteId || !form.analitoId) {
+      setErro("Preencha NTO, setor, equipamento, material, fabricante e analito.");
       return;
     }
     if (!form.numero.trim() || !form.validade || !form.abertura || !form.responsavelAbertura.trim()) {
@@ -141,6 +143,7 @@ export default function RastreabilidadePage() {
         equipamentoId: form.equipamentoId,
         tipoMaterial: form.tipoMaterial,
         fabricanteId: form.fabricanteId,
+        analitoId: form.analitoId,
         lote: {
           numero: form.numero.trim(),
           validade: form.validade,
@@ -161,8 +164,8 @@ export default function RastreabilidadePage() {
   async function salvarEdicao(e: FormEvent) {
     e.preventDefault();
     if (!editando) return;
-    if (!form.ntoId || !form.setorId || !form.equipamentoId || !form.tipoMaterial || !form.fabricanteId) {
-      setErro("Preencha NTO, setor, equipamento, material e fabricante.");
+    if (!form.ntoId || !form.setorId || !form.equipamentoId || !form.tipoMaterial || !form.fabricanteId || !form.analitoId) {
+      setErro("Preencha NTO, setor, equipamento, material, fabricante e analito.");
       return;
     }
     setSalvando(true);
@@ -174,6 +177,7 @@ export default function RastreabilidadePage() {
         equipamentoId: form.equipamentoId,
         tipoMaterial: form.tipoMaterial,
         fabricanteId: form.fabricanteId,
+        analitoId: form.analitoId,
       });
       setEditando(null);
       list.reload();
@@ -269,7 +273,7 @@ export default function RastreabilidadePage() {
         <div className={s.searchBar}>
           <HiOutlineMagnifyingGlass className={s.searchIcon} />
           <input
-            placeholder="Pesquisar por ID, equipamento, setor, fabricante..."
+            placeholder="Pesquisar por ID, equipamento, setor, fabricante, analito..."
             value={list.q}
             onChange={(e) => list.setQ(e.target.value)}
           />
@@ -285,6 +289,7 @@ export default function RastreabilidadePage() {
                 <th>Equipamento</th>
                 <th>Material</th>
                 <th>Fabricante</th>
+                <th>Analito</th>
                 <th>Lotes</th>
                 <th>Criado Em</th>
                 <th>Ações</th>
@@ -293,12 +298,12 @@ export default function RastreabilidadePage() {
             <tbody>
               {list.loading && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Carregando...</td>
+                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Carregando...</td>
                 </tr>
               )}
               {!list.loading && list.items.length === 0 && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Nenhum registro encontrado</td>
+                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Nenhum registro encontrado</td>
                 </tr>
               )}
               {!list.loading && list.items.map((r) => (
@@ -314,6 +319,7 @@ export default function RastreabilidadePage() {
                   <td>{r.equipamento}</td>
                   <td>{r.tipoMaterial}</td>
                   <td>{r.fabricante}</td>
+                  <td>{r.analito || "—"}</td>
                   <td><span className={s.badgeBlue}>{r.lotes}</span></td>
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(r.criadoEm)}</td>
                   <td onClick={(e) => e.stopPropagation()}>
@@ -363,6 +369,7 @@ export default function RastreabilidadePage() {
                   </select>
                 </div>
                 <CatalogSelect label="Fabricante" value={form.fabricanteId} onChange={(fabricanteId) => setForm({ ...form, fabricanteId })} items={catalogos.fabricantes} />
+                <CatalogSelect label="Analito" value={form.analitoId} onChange={(analitoId) => setForm({ ...form, analitoId })} items={catalogos.analitos} />
               </div>
 
               {criando && (
@@ -475,6 +482,7 @@ export default function RastreabilidadePage() {
               <div className={s.formGroup}><span className={s.formLabel}>Equipamento</span><span>{detalhe.equipamento}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Material</span><span>{detalhe.tipoMaterial}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Fabricante</span><span>{detalhe.fabricante}</span></div>
+              <div className={s.formGroup}><span className={s.formLabel}>Analito</span><span>{detalhe.analito || "—"}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Criado por</span><span>{detalhe.criadoPor}</span></div>
             </div>
 
