@@ -147,14 +147,14 @@ function ValidacaoConteudo() {
         const registro = res.data;
         const lotes = registro.lotes ?? [];
         const lote = lotes.find((item) => !item.fechamento) ?? lotes[lotes.length - 1];
-        setNomes({ equipamento: registro.equipamento, fabricante: registro.fabricante });
+        setNomes({ equipamento: lote?.equipamento ?? "", fabricante: registro.fabricante });
         setSituacaoInicial("Em andamento");
         setForm(comAnalito({
           ...formVazio(),
-          equipamentoId: registro.equipamentoId,
+          equipamentoId: lote?.equipamentoId ?? "",
           fabricanteId: registro.fabricanteId,
-          numero: lote?.numero ?? "",
-          validade: dateInput(lote?.validade),
+          numero: registro.numero || lote?.numero || "",
+          validade: dateInput(registro.validade || lote?.validade),
         }, {
           id: registro.analitoId,
           nome: registro.analito,

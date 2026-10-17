@@ -36,6 +36,8 @@ export interface CatalogoItem {
 
 export interface LoteRastreabilidade {
   id: string;
+  equipamentoId: string;
+  equipamento: string;
   numero: string;
   validade: string;
   abertura: string;
@@ -60,12 +62,16 @@ export interface RastreabilidadeLista {
   tipoMaterial: string;
   fabricante: string;
   analito?: string;
+  numero?: string;
+  validade?: string;
   lotes: number;
   criadoEm: string;
   criadoPor: string;
 }
 
 export interface LoteGrupoRastreabilidade {
+  equipamentoId?: string;
+  equipamento: string;
   numero: string;
   abertura: string;
   validade: string;
@@ -75,12 +81,12 @@ export interface LoteGrupoRastreabilidade {
 export interface RastreabilidadeNoGrupo {
   id: string;
   codigo: string;
-  equipamentoId: string;
-  equipamento: string;
   nto: string;
   setor: string;
   tipoMaterial: string;
   fabricante: string;
+  numero?: string;
+  validade?: string;
   lotes: LoteGrupoRastreabilidade[];
 }
 
@@ -98,14 +104,14 @@ export interface RastreabilidadeDetalhe {
   nto: string;
   setorId: string;
   setor: string;
-  equipamentoId: string;
-  equipamento: string;
   tipoMaterial: TipoMaterial;
   fabricanteId: string;
   fabricante: string;
   analitoId?: string;
   analito?: string;
   erroTotalPermitido?: string | number;
+  numero: string;
+  validade: string;
   criadoEm: string;
   criadoPor: string;
   lotes: LoteRastreabilidade[];

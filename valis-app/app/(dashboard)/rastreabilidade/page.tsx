@@ -41,6 +41,7 @@ function lotesDoRegistro(valor: unknown): RastreabilidadeNoGrupo["lotes"] {
     if (!lote || typeof lote !== "object") return [];
     const item = lote as Record<string, unknown>;
     return [{
+      equipamento: rotulo(item.equipamento),
       numero: rotulo(item.numero) || "—",
       abertura: typeof item.abertura === "string" ? item.abertura : "",
       validade: typeof item.validade === "string" ? item.validade : "",
@@ -190,21 +191,22 @@ function GrupoAnalito({
           <td style={{ fontWeight: 600 }}>{rotulo(r.codigo)}</td>
           <td>{rotulo(r.nto)}</td>
           <td>{rotulo(r.setor)}</td>
-          <td>{rotulo(r.equipamento)}</td>
           <td>{rotulo(r.tipoMaterial)}</td>
           <td>{rotulo(r.fabricante)}</td>
+          <td>
+            <div style={{ fontWeight: 600 }}>{rotulo(r.numero) || lotes[0]?.numero || "—"}</div>
+            <div>{formatDate(r.validade || lotes[0]?.validade)}</div>
+          </td>
           <td>
             {lotes.length === 0 && "—"}
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {lotes.map((lote) => {
                 const situacao = situacaoLote(lote);
                 return (
-                  <div key={`${r.id}-${lote.numero}-${lote.abertura}`}>
-                    <span style={{ fontWeight: 600 }}>{lote.numero}</span>
+                  <div key={`${r.id}-${lote.equipamento}-${lote.abertura}`}>
+                    <span style={{ fontWeight: 600 }}>{lote.equipamento || "—"}</span>
                     {" · "}
                     {formatDate(lote.abertura)}
-                    {" · "}
-                    {formatDate(lote.validade)}
                     {" "}
                     <span className={classeSituacao(situacao)}>{situacao}</span>
                   </div>
@@ -261,7 +263,15 @@ export default function RastreabilidadePage() {
   const [form, setForm] = useState(formVazio);
   const [editando, setEditando] = useState<null | { id: string; codigo: string }>(null);
   const [detalhe, setDetalhe] = useState<RastreabilidadeDetalhe | null>(null);
-  const [abertura, setAbertura] = useState<null | { id: string; codigo: string; numero: string; validade: string; data: string; responsavel: string }>(null);
+  const [abertura, setAbertura] = useState<null | {
+    id: string;
+    codigo: string;
+    numero: string;
+    validade: string;
+    equipamentoId: string;
+    data: string;
+    responsavel: string;
+  }>(null);
   const [finalizar, setFinalizar] = useState<null | {
     id: string;
     codigo: string;
@@ -301,10 +311,11 @@ export default function RastreabilidadePage() {
         ...formVazio,
         ntoId: registro.ntoId,
         setorId: registro.setorId,
-        equipamentoId: registro.equipamentoId,
         tipoMaterial: registro.tipoMaterial,
         fabricanteId: registro.fabricanteId,
         analitoId: registro.analitoId ?? "",
+        numero: registro.numero || registro.lotes.at(-1)?.numero || "",
+        validade: registro.validade || registro.lotes.at(-1)?.validade || "",
       });
       setEditando({ id: registro.id, codigo: registro.codigo });
     } catch (erroCapturado) {
@@ -318,7 +329,7 @@ export default function RastreabilidadePage() {
       const registro = await carregarDetalhe(item.id);
       const abertos = registro.lotes.filter((lote) => !lote.fechamento);
       if (abertos.length === 0) {
-        setErro("Não há lote aberto para finalizar.");
+        setErro("Não há abertura em aberto para finalizar.");
         return;
       }
       setFinalizar({
@@ -374,8 +385,8 @@ export default function RastreabilidadePage() {
   async function salvarEdicao(e: FormEvent) {
     e.preventDefault();
     if (!editando) return;
-    if (!form.ntoId || !form.setorId || !form.equipamentoId || !form.tipoMaterial || !form.fabricanteId || !form.analitoId) {
-      setErro("Preencha NTO, setor, equipamento, material, fabricante e analito.");
+    if (!form.ntoId || !form.setorId || !form.tipoMaterial || !form.fabricanteId || !form.analitoId) {
+      setErro("Preencha NTO, setor, material, fabricante e analito.");
       return;
     }
     setSalvando(true);
@@ -384,7 +395,6 @@ export default function RastreabilidadePage() {
       await apiSend("PATCH", `/rastreabilidades/${editando.id}`, {
         ntoId: form.ntoId,
         setorId: form.setorId,
-        equipamentoId: form.equipamentoId,
         tipoMaterial: form.tipoMaterial,
         fabricanteId: form.fabricanteId,
         analitoId: form.analitoId,
@@ -398,19 +408,43 @@ export default function RastreabilidadePage() {
     }
   }
 
+  async function abrirAbertura(id: string) {
+    setErro("");
+    try {
+      const registro = await carregarDetalhe(id);
+      const lote = registro.lotes.at(-1);
+      const numero = registro.numero || lote?.numero || "";
+      const validade = registro.validade || lote?.validade || "";
+      if (!numero || !validade) {
+        setErro("Este registro não tem lote e validade para uma nova abertura.");
+        return;
+      }
+      setAbertura({
+        id: registro.id,
+        codigo: registro.codigo,
+        numero,
+        validade,
+        equipamentoId: "",
+        data: "",
+        responsavel: usuario?.nome ?? "",
+      });
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+    }
+  }
+
   async function salvarAbertura(e: FormEvent) {
     e.preventDefault();
     if (!abertura) return;
-    if (!abertura.numero.trim() || !abertura.validade || !abertura.data || !abertura.responsavel.trim()) {
-      setErro("Preencha número, validade, abertura e responsável.");
+    if (!abertura.equipamentoId || !abertura.data || !abertura.responsavel.trim()) {
+      setErro("Escolha o equipamento, a data de abertura e o responsável.");
       return;
     }
     setSalvando(true);
     setErro("");
     try {
       await apiSend("POST", `/rastreabilidades/${abertura.id}/lotes`, {
-        numero: abertura.numero.trim(),
-        validade: abertura.validade,
+        equipamentoId: abertura.equipamentoId,
         abertura: abertura.data,
         responsavelAbertura: abertura.responsavel.trim(),
       });
@@ -510,9 +544,9 @@ export default function RastreabilidadePage() {
                 <th>ID</th>
                 <th>NTO</th>
                 <th>Setor</th>
-                <th>Equipamento</th>
                 <th>Material</th>
                 <th>Fabricante</th>
+                <th>Lote</th>
                 <th>Aberturas</th>
                 <th>Ações</th>
               </tr>
@@ -540,11 +574,15 @@ export default function RastreabilidadePage() {
                       <td style={{ fontWeight: 600 }}>{item.codigo}</td>
                       <td>{item.nto}</td>
                       <td>{item.setor}</td>
-                      <td>{item.equipamento}</td>
                       <td>{item.tipoMaterial}</td>
                       <td>{item.fabricante}</td>
                       <td>
-                        {item.analito ? <span className={s.badgeGreen}>{item.analito}</span> : "—"}
+                        <div style={{ fontWeight: 600 }}>{item.numero || "—"}</div>
+                        <div>{formatDate(item.validade)}</div>
+                      </td>
+                      <td>
+                        <div>{item.equipamento || "—"}</div>
+                        {item.analito ? <span className={s.badgeGreen}>{item.analito}</span> : null}
                         {typeof item.lotes === "number" ? <span className={s.badgeBlue} style={{ marginLeft: 8 }}>{item.lotes}</span> : null}
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
@@ -555,17 +593,7 @@ export default function RastreabilidadePage() {
                             editar: () => abrirEdicao(item.id),
                             excluir: () => excluir(item.id),
                             finalizar: () => abrirFinalizar(item),
-                            abertura: () => {
-                              setErro("");
-                              setAbertura({
-                                id: item.id,
-                                codigo: item.codigo,
-                                numero: "",
-                                validade: "",
-                                data: "",
-                                responsavel: usuario?.nome ?? "",
-                              });
-                            },
+                            abertura: () => abrirAbertura(item.id),
                           })}
                         />
                       </td>
@@ -584,17 +612,7 @@ export default function RastreabilidadePage() {
                     onEditar={abrirEdicao}
                     onExcluir={excluir}
                     onFinalizar={abrirFinalizar}
-                    onAbertura={(registro) => {
-                      setErro("");
-                      setAbertura({
-                        id: registro.id,
-                        codigo: registro.codigo,
-                        numero: "",
-                        validade: "",
-                        data: "",
-                        responsavel: usuario?.nome ?? "",
-                      });
-                    }}
+                    onAbertura={(registro) => abrirAbertura(registro.id)}
                   />
                 );
               })}
@@ -612,7 +630,9 @@ export default function RastreabilidadePage() {
               <div className={s.formGrid}>
                 <CatalogSelect label="NTO Associada" value={form.ntoId} onChange={(ntoId) => setForm({ ...form, ntoId })} items={catalogos.ntos} />
                 <CatalogSelect label="Setor" value={form.setorId} onChange={(setorId) => setForm({ ...form, setorId })} items={catalogos.setores} />
-                <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} />
+                {criando && (
+                  <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} />
+                )}
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Tipo de Material</label>
                   <select className={s.formSelect} value={form.tipoMaterial} onChange={(e) => setForm({ ...form, tipoMaterial: e.target.value as TipoMaterial })}>
@@ -623,6 +643,19 @@ export default function RastreabilidadePage() {
                 <CatalogSelect label="Fabricante" value={form.fabricanteId} onChange={(fabricanteId) => setForm({ ...form, fabricanteId })} items={catalogos.fabricantes} />
                 <CatalogSelect label="Analito" value={form.analitoId} onChange={(analitoId) => setForm({ ...form, analitoId })} items={catalogos.analitos} />
               </div>
+
+              {editando && (
+                <div className={s.formGrid} style={{ marginTop: 16 }}>
+                  <div className={s.formGroup}>
+                    <label className={s.formLabel}>Número do Lote</label>
+                    <input className={s.formInput} value={form.numero} readOnly />
+                  </div>
+                  <div className={s.formGroup}>
+                    <label className={s.formLabel}>Data de Validade</label>
+                    <input className={s.formInput} value={formatDate(form.validade)} readOnly />
+                  </div>
+                </div>
+              )}
 
               {criando && (
                 <>
@@ -662,16 +695,25 @@ export default function RastreabilidadePage() {
         <div className={s.modalOverlay} onClick={() => setAbertura(null)}>
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
             <h2 className={s.modalTitle}>Abertura — {abertura.codigo}</h2>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
+              Lote e validade permanecem iguais. Informe o equipamento e a nova data.
+            </p>
             <form onSubmit={salvarAbertura}>
               <div className={s.formGrid}>
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Número do Lote</label>
-                  <input className={s.formInput} value={abertura.numero} onChange={(e) => setAbertura({ ...abertura, numero: e.target.value })} />
+                  <input className={s.formInput} value={abertura.numero} readOnly />
                 </div>
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Data de Validade</label>
-                  <input className={s.formInput} type="date" value={abertura.validade} onChange={(e) => setAbertura({ ...abertura, validade: e.target.value })} />
+                  <input className={s.formInput} value={formatDate(abertura.validade)} readOnly />
                 </div>
+                <CatalogSelect
+                  label="Equipamento"
+                  value={abertura.equipamentoId}
+                  onChange={(equipamentoId) => setAbertura({ ...abertura, equipamentoId })}
+                  items={catalogos.equipamentos}
+                />
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Data de Abertura</label>
                   <input className={s.formInput} type="date" value={abertura.data} onChange={(e) => setAbertura({ ...abertura, data: e.target.value })} />
@@ -694,14 +736,14 @@ export default function RastreabilidadePage() {
       {finalizar && (
         <div className={s.modalOverlay} onClick={() => setFinalizar(null)}>
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={s.modalTitle}>Finalizar lote — {finalizar.codigo}</h2>
+            <h2 className={s.modalTitle}>Finalizar abertura — {finalizar.codigo}</h2>
             <form onSubmit={salvarFinalizacao}>
               <div className={s.formGrid}>
                 <div className={s.formGroup}>
-                  <label className={s.formLabel}>Lote</label>
+                  <label className={s.formLabel}>Abertura</label>
                   <select className={s.formSelect} value={finalizar.loteId} onChange={(e) => setFinalizar({ ...finalizar, loteId: e.target.value })}>
                     {finalizar.lotes.map((lote) => (
-                      <option key={lote.id} value={lote.id}>{lote.numero}</option>
+                      <option key={lote.id} value={lote.id}>{lote.equipamento || "Equipamento"} · {formatDate(lote.abertura)}</option>
                     ))}
                   </select>
                 </div>
@@ -731,20 +773,20 @@ export default function RastreabilidadePage() {
             <div className={s.formGrid}>
               <div className={s.formGroup}><span className={s.formLabel}>NTO</span><span>{detalhe.nto}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Setor</span><span>{detalhe.setor}</span></div>
-              <div className={s.formGroup}><span className={s.formLabel}>Equipamento</span><span>{detalhe.equipamento}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Material</span><span>{detalhe.tipoMaterial}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Fabricante</span><span>{detalhe.fabricante}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Analito</span><span>{detalhe.analito || "—"}</span></div>
+              <div className={s.formGroup}><span className={s.formLabel}>Lote</span><span>{detalhe.numero || detalhe.lotes[0]?.numero || "—"}</span></div>
+              <div className={s.formGroup}><span className={s.formLabel}>Validade</span><span>{formatDate(detalhe.validade || detalhe.lotes[0]?.validade)}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Criado por</span><span>{detalhe.criadoPor}</span></div>
             </div>
 
-            <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 12px", color: "var(--text-secondary)" }}>Lotes ({detalhe.lotes.length})</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 12px", color: "var(--text-secondary)" }}>Aberturas ({detalhe.lotes.length})</h3>
             <div className={s.tableWrapper}>
               <table className={s.table}>
                 <thead>
                   <tr>
-                    <th>Lote</th>
-                    <th>Validade</th>
+                    <th>Equipamento</th>
                     <th>Abertura</th>
                     <th>Resp. Abertura</th>
                     <th>Fechamento</th>
@@ -755,15 +797,14 @@ export default function RastreabilidadePage() {
                 <tbody>
                   {detalhe.lotes.length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", color: "var(--text-secondary)" }}>Nenhum lote</td>
+                      <td colSpan={6} style={{ textAlign: "center", color: "var(--text-secondary)" }}>Nenhuma abertura</td>
                     </tr>
                   )}
                   {detalhe.lotes.map((lote) => {
                     const situacao = situacaoLote(lote);
                     return (
                       <tr key={lote.id}>
-                        <td style={{ fontWeight: 600 }}>{lote.numero}</td>
-                        <td>{formatDate(lote.validade)}</td>
+                        <td style={{ fontWeight: 600 }}>{lote.equipamento || "—"}</td>
                         <td>{formatDate(lote.abertura)}</td>
                         <td>{lote.responsavelAbertura || "—"}</td>
                         <td>{lote.fechamento ? formatDate(lote.fechamento) : "—"}</td>
