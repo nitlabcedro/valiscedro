@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   HiOutlinePlus,
@@ -11,6 +11,7 @@ import {
   HiOutlineCheck,
   HiOutlineBookOpen,
   HiOutlineBeaker,
+  HiOutlineBars3,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { apiGet, apiSend, mensagemErro } from "@/lib/api";
@@ -52,6 +53,100 @@ function ehGrupo(item: RastreabilidadeGrupo | RastreabilidadeLista): item is Ras
   return "rastreabilidades" in item && Array.isArray(item.rastreabilidades);
 }
 
+type AcaoMenu = {
+  rotulo: string;
+  icone: ReactNode;
+  onClick: () => void;
+  perigo?: boolean;
+};
+
+function MenuAcoes({ acoes }: { acoes: AcaoMenu[] }) {
+  const [aberto, setAberto] = useState(false);
+  const [posicao, setPosicao] = useState({ top: 0, left: 0 });
+  const raiz = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    function aoClicar(evento: MouseEvent) {
+      if (!raiz.current?.contains(evento.target as Node)) setAberto(false);
+    }
+    function aoTeclar(evento: KeyboardEvent) {
+      if (evento.key === "Escape") setAberto(false);
+    }
+    function aoRolar() {
+      setAberto(false);
+    }
+    document.addEventListener("mousedown", aoClicar);
+    document.addEventListener("keydown", aoTeclar);
+    window.addEventListener("scroll", aoRolar, true);
+    return () => {
+      document.removeEventListener("mousedown", aoClicar);
+      document.removeEventListener("keydown", aoTeclar);
+      window.removeEventListener("scroll", aoRolar, true);
+    };
+  }, [aberto]);
+
+  function alternar(evento: ReactMouseEvent<HTMLButtonElement>) {
+    const retangulo = evento.currentTarget.getBoundingClientRect();
+    const largura = 188;
+    const altura = acoes.length * 36 + 12;
+    const abaixo = retangulo.bottom + 6 + altura <= window.innerHeight;
+    setPosicao({
+      top: abaixo ? retangulo.bottom + 6 : Math.max(8, retangulo.top - altura - 6),
+      left: Math.max(8, Math.min(retangulo.right - largura, window.innerWidth - largura - 8)),
+    });
+    setAberto((atual) => !atual);
+  }
+
+  return (
+    <div ref={raiz}>
+      <button type="button" className={s.iconBtn} aria-label="Ações" aria-expanded={aberto} aria-haspopup="menu" onClick={alternar}>
+        <HiOutlineBars3 size={18} />
+      </button>
+      {aberto && (
+        <div className={s.acaoMenu} role="menu" style={{ top: posicao.top, left: posicao.left }}>
+          {acoes.map((acao) => (
+            <button
+              key={acao.rotulo}
+              type="button"
+              role="menuitem"
+              className={acao.perigo ? s.acaoItemPerigo : s.acaoItem}
+              onClick={() => {
+                setAberto(false);
+                acao.onClick();
+              }}
+            >
+              {acao.icone}
+              {acao.rotulo}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function acoesDoRegistro(
+  podeValidar: boolean,
+  acoes: {
+    validar: () => void;
+    detalhe: () => void;
+    editar: () => void;
+    excluir: () => void;
+    finalizar: () => void;
+    abertura: () => void;
+  },
+): AcaoMenu[] {
+  return [
+    ...(podeValidar ? [{ rotulo: "Validar", icone: <HiOutlineBeaker />, onClick: acoes.validar }] : []),
+    { rotulo: "Ver detalhes", icone: <HiOutlineEye />, onClick: acoes.detalhe },
+    { rotulo: "Editar", icone: <HiOutlinePencilSquare />, onClick: acoes.editar },
+    { rotulo: "Finalizar", icone: <HiOutlineCheck />, onClick: acoes.finalizar },
+    { rotulo: "Abertura", icone: <HiOutlineBookOpen />, onClick: acoes.abertura },
+    { rotulo: "Excluir", icone: <HiOutlineTrash />, onClick: acoes.excluir, perigo: true },
+  ];
+}
+
 function GrupoAnalito({
   grupo,
   erro,
@@ -78,7 +173,7 @@ function GrupoAnalito({
       <tr className={s.groupRow}>
         <td colSpan={8}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span className={s.badgePurple}>{rotulo(grupo.analito) || "Sem analito"}</span>
+            <span className={s.badgeGreen}>{rotulo(grupo.analito) || "Sem analito"}</span>
             {erro ? <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Erro total {erro}</span> : null}
           </div>
         </td>
@@ -118,16 +213,16 @@ function GrupoAnalito({
             </div>
           </td>
           <td onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", gap: 4 }}>
-              {podeValidar && (
-                <button type="button" className={s.iconBtn} title="Validar" onClick={() => onValidar(r.id)}><HiOutlineBeaker /></button>
-              )}
-              <button type="button" className={s.iconBtn} onClick={() => onDetalhe(r.id)} title="Ver detalhes"><HiOutlineEye /></button>
-              <button type="button" className={s.iconBtn} title="Editar" onClick={() => onEditar(r.id)}><HiOutlinePencilSquare /></button>
-              <button type="button" className={s.iconBtn} title="Excluir" onClick={() => onExcluir(r.id)}><HiOutlineTrash /></button>
-              <button type="button" className={s.iconBtn} title="Finalizar" onClick={() => onFinalizar(r)}><HiOutlineCheck /></button>
-              <button type="button" className={s.iconBtn} title="Abertura" onClick={() => onAbertura(r)}><HiOutlineBookOpen /></button>
-            </div>
+            <MenuAcoes
+              acoes={acoesDoRegistro(podeValidar, {
+                validar: () => onValidar(r.id),
+                detalhe: () => onDetalhe(r.id),
+                editar: () => onEditar(r.id),
+                excluir: () => onExcluir(r.id),
+                finalizar: () => onFinalizar(r),
+                abertura: () => onAbertura(r),
+              })}
+            />
           </td>
         </tr>
         );
@@ -449,30 +544,30 @@ export default function RastreabilidadePage() {
                       <td>{item.tipoMaterial}</td>
                       <td>{item.fabricante}</td>
                       <td>
-                        {item.analito ? <span className={s.badgePurple}>{item.analito}</span> : "—"}
+                        {item.analito ? <span className={s.badgeGreen}>{item.analito}</span> : "—"}
                         {typeof item.lotes === "number" ? <span className={s.badgeBlue} style={{ marginLeft: 8 }}>{item.lotes}</span> : null}
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          {podeValidar && (
-                            <button type="button" className={s.iconBtn} title="Validar" onClick={() => abrirValidacao(item.id)}><HiOutlineBeaker /></button>
-                          )}
-                          <button type="button" className={s.iconBtn} onClick={() => verDetalhe(item.id)} title="Ver detalhes"><HiOutlineEye /></button>
-                          <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(item.id)}><HiOutlinePencilSquare /></button>
-                          <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(item.id)}><HiOutlineTrash /></button>
-                          <button type="button" className={s.iconBtn} title="Finalizar" onClick={() => abrirFinalizar(item)}><HiOutlineCheck /></button>
-                          <button type="button" className={s.iconBtn} title="Abertura" onClick={() => {
-                            setErro("");
-                            setAbertura({
-                              id: item.id,
-                              codigo: item.codigo,
-                              numero: "",
-                              validade: "",
-                              data: "",
-                              responsavel: usuario?.nome ?? "",
-                            });
-                          }}><HiOutlineBookOpen /></button>
-                        </div>
+                        <MenuAcoes
+                          acoes={acoesDoRegistro(podeValidar, {
+                            validar: () => abrirValidacao(item.id),
+                            detalhe: () => verDetalhe(item.id),
+                            editar: () => abrirEdicao(item.id),
+                            excluir: () => excluir(item.id),
+                            finalizar: () => abrirFinalizar(item),
+                            abertura: () => {
+                              setErro("");
+                              setAbertura({
+                                id: item.id,
+                                codigo: item.codigo,
+                                numero: "",
+                                validade: "",
+                                data: "",
+                                responsavel: usuario?.nome ?? "",
+                              });
+                            },
+                          })}
+                        />
                       </td>
                     </tr>
                   );
