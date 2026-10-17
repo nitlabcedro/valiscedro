@@ -65,6 +65,32 @@ export interface RastreabilidadeLista {
   criadoPor: string;
 }
 
+export interface LoteGrupoRastreabilidade {
+  numero: string;
+  abertura: string;
+  validade: string;
+  fechamento: string | null;
+}
+
+export interface RastreabilidadeNoGrupo {
+  id: string;
+  codigo: string;
+  equipamentoId: string;
+  equipamento: string;
+  nto: string;
+  setor: string;
+  tipoMaterial: string;
+  fabricante: string;
+  lotes: LoteGrupoRastreabilidade[];
+}
+
+export interface RastreabilidadeGrupo {
+  analitoId: string | null;
+  analito: string;
+  erroTotalPermitido: string | number;
+  rastreabilidades: RastreabilidadeNoGrupo[];
+}
+
 export interface RastreabilidadeDetalhe {
   id: string;
   codigo: string;

@@ -144,6 +144,16 @@
   background: rgba(0, 0, 0, 0.03);
 }
 
+.groupRow td {
+  background: rgba(139, 92, 246, 0.08);
+  padding-top: 18px;
+  padding-bottom: 10px;
+}
+
+.table tbody tr.groupRow:hover {
+  background: rgba(139, 92, 246, 0.08);
+}
+
 /* Badge */
 .badge {
   display: inline-flex;

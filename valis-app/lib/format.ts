@@ -1,4 +1,4 @@
-import type { CatalogoItem, LoteRastreabilidade } from "@/lib/types";
+import type { CatalogoItem } from "@/lib/types";
 
 export function cargoLabel(cargo: string) {
   return cargo === "Coordenador" ? "Coordenador" : cargo;
@@ -15,13 +15,14 @@ export function iniciais(nome: string) {
 }
 
 export function formatDate(value: string | null | undefined) {
-  if (!value) return "—";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [ano, mes, dia] = value.split("-");
+  if (value == null || value === "") return "—";
+  const texto = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
+    const [ano, mes, dia] = texto.slice(0, 10).split("-");
     return `${dia}/${mes}/${ano}`;
   }
-  const data = new Date(value);
-  if (Number.isNaN(data.getTime())) return value;
+  const data = new Date(texto);
+  if (Number.isNaN(data.getTime())) return texto;
   return data.toLocaleDateString("pt-BR");
 }
 
@@ -63,12 +64,14 @@ export function numeroOuTexto(input: string): string | number {
   return texto;
 }
 
-export function situacaoLote(lote: Pick<LoteRastreabilidade, "fechamento" | "validade">) {
-  if (lote.fechamento && lote.fechamento.trim()) return "Fechado";
-  if (!lote.validade) return "Aberto";
+export function situacaoLote(lote: { fechamento?: string | null; validade?: string | null }) {
+  const fechamento = typeof lote?.fechamento === "string" ? lote.fechamento.trim() : "";
+  if (fechamento) return "Fechado";
+  const validadeTexto = typeof lote?.validade === "string" ? lote.validade.slice(0, 10) : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(validadeTexto)) return "Aberto";
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
-  const validade = new Date(`${lote.validade.slice(0, 10)}T00:00:00`);
+  const validade = new Date(`${validadeTexto}T00:00:00`);
   const diffDias = Math.round((validade.getTime() - hoje.getTime()) / 86_400_000);
   if (diffDias < 0) return "Vencido";
   if (diffDias <= 7) return "Próximo do vencimento";
@@ -94,41 +97,36 @@ export function tripleOuUndefined(valor: [string, string, string]): [string, str
   return [valor[0].trim(), valor[1].trim(), valor[2].trim()];
 }
 
-export function normalizarErroTotal(valor: string) {
-  return valor.replace(/\s/g, "");
-}
-
 export function digitarErroTotal(valor: string) {
-  const limpo = valor.replace(/\./g, ",").replace(/[^\d,]/g, "");
+  const limpo = valor.replace(/%/g, "").replace(/\./g, ",").replace(/[^\d,]/g, "");
   const temVirgula = limpo.includes(",");
   const [inteiroBruto, ...resto] = limpo.split(",");
-  const inteiro = inteiroBruto.replace(/\D/g, "").slice(0, 2);
+  let inteiro = inteiroBruto.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 3);
   if (!temVirgula) return inteiro;
+  if (!inteiro) inteiro = "0";
   const decimal = resto.join("").replace(/\D/g, "").slice(0, 2);
   return `${inteiro},${decimal}`;
 }
 
-export function formatarErroTotal(valor: string | number | null | undefined) {
+export function numeroErroTotal(valor: string | number | null | undefined) {
   if (valor == null || valor === "") return "";
-  if (typeof valor === "number") {
-    if (!Number.isFinite(valor) || valor < 0 || valor >= 100) return "";
-    const [inteiro, decimal] = valor.toFixed(2).split(".");
-    return `${inteiro.padStart(2, "0")},${decimal}`;
-  }
-  const texto = String(valor).trim().replace(/\s/g, "").replace(".", ",");
-  const match = texto.match(/^(\d{1,2})(?:,(\d{0,2}))?$/);
-  if (!match) return "";
-  return `${match[1].padStart(2, "0")},${(match[2] ?? "").padEnd(2, "0")}`;
+  return digitarErroTotal(String(valor)).replace(/,$/, "");
 }
 
-export function erroTotalPermitidoValido(valor: string) {
-  return /^\d{2},\d{2}$/.test(valor);
+export function erroTotalParaSalvar(valor: string) {
+  const numero = numeroErroTotal(valor);
+  if (!/^\d{1,3}(?:,\d{1,2})?$/.test(numero)) return "";
+  return `${numero}%`;
+}
+
+export function exibirErroTotal(valor: string | number | null | undefined) {
+  const numero = numeroErroTotal(valor);
+  return numero ? `${numero}%` : "";
 }
 
 export function rotuloAnalito(item: { nome: string; erroTotalPermitido?: string | number }) {
-  if (item.erroTotalPermitido == null || item.erroTotalPermitido === "") return item.nome;
-  const erro = formatarErroTotal(item.erroTotalPermitido) || textoValor(item.erroTotalPermitido);
-  return `${item.nome} (${erro})`;
+  const erro = exibirErroTotal(item.erroTotalPermitido);
+  return erro ? `${item.nome} (${erro})` : item.nome;
 }
 
 export function opcoesAnalito(

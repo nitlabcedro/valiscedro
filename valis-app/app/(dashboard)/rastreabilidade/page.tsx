@@ -16,14 +16,125 @@ import s from "@/styles/shared.module.css";
 import { apiGet, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
 import { useCatalogos } from "@/lib/use-catalogos";
-import { cargoLabel, formatDate, situacaoLote } from "@/lib/format";
+import { cargoLabel, exibirErroTotal, formatDate, situacaoLote } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { cargoDe } from "@/lib/acesso";
-import { TIPOS_MATERIAL, type RastreabilidadeDetalhe, type RastreabilidadeLista, type TipoMaterial } from "@/lib/types";
+import { TIPOS_MATERIAL, type RastreabilidadeDetalhe, type RastreabilidadeGrupo, type RastreabilidadeLista, type RastreabilidadeNoGrupo, type TipoMaterial } from "@/lib/types";
+
+function rotulo(valor: unknown) {
+  if (typeof valor === "string" || typeof valor === "number") return String(valor);
+  if (valor && typeof valor === "object" && "nome" in valor) {
+    const nome = (valor as { nome?: unknown }).nome;
+    if (typeof nome === "string") return nome;
+  }
+  return "";
+}
+
+function lotesDoRegistro(valor: unknown): RastreabilidadeNoGrupo["lotes"] {
+  if (!Array.isArray(valor)) return [];
+  return valor.flatMap((lote) => {
+    if (!lote || typeof lote !== "object") return [];
+    const item = lote as Record<string, unknown>;
+    return [{
+      numero: rotulo(item.numero) || "—",
+      abertura: typeof item.abertura === "string" ? item.abertura : "",
+      validade: typeof item.validade === "string" ? item.validade : "",
+      fechamento: typeof item.fechamento === "string" ? item.fechamento : null,
+    }];
+  });
+}
+
+function ehGrupo(item: RastreabilidadeGrupo | RastreabilidadeLista): item is RastreabilidadeGrupo {
+  return "rastreabilidades" in item && Array.isArray(item.rastreabilidades);
+}
+
+function GrupoAnalito({
+  grupo,
+  erro,
+  podeValidar,
+  onValidar,
+  onDetalhe,
+  onEditar,
+  onExcluir,
+  onFinalizar,
+  onAbertura,
+}: {
+  grupo: RastreabilidadeGrupo;
+  erro: string;
+  podeValidar: boolean;
+  onValidar: (id: string) => void;
+  onDetalhe: (id: string) => void;
+  onEditar: (id: string) => void;
+  onExcluir: (id: string) => void;
+  onFinalizar: (item: RastreabilidadeNoGrupo) => void;
+  onAbertura: (item: RastreabilidadeNoGrupo) => void;
+}) {
+  return (
+    <>
+      <tr className={s.groupRow}>
+        <td colSpan={8}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span className={s.badgePurple}>{rotulo(grupo.analito) || "Sem analito"}</span>
+            {erro ? <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Erro total {erro}</span> : null}
+          </div>
+        </td>
+      </tr>
+      {(grupo.rastreabilidades ?? []).map((r) => {
+        const lotes = lotesDoRegistro(r.lotes);
+        return (
+        <tr
+          key={r.id}
+          onClick={podeValidar ? () => onValidar(r.id) : undefined}
+          style={podeValidar ? { cursor: "pointer" } : undefined}
+          title={podeValidar ? "Abrir validação" : undefined}
+        >
+          <td style={{ fontWeight: 600 }}>{rotulo(r.codigo)}</td>
+          <td>{rotulo(r.nto)}</td>
+          <td>{rotulo(r.setor)}</td>
+          <td>{rotulo(r.equipamento)}</td>
+          <td>{rotulo(r.tipoMaterial)}</td>
+          <td>{rotulo(r.fabricante)}</td>
+          <td>
+            {lotes.length === 0 && "—"}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {lotes.map((lote) => {
+                const situacao = situacaoLote(lote);
+                return (
+                  <div key={`${r.id}-${lote.numero}-${lote.abertura}`}>
+                    <span style={{ fontWeight: 600 }}>{lote.numero}</span>
+                    {" · "}
+                    {formatDate(lote.abertura)}
+                    {" · "}
+                    {formatDate(lote.validade)}
+                    {" "}
+                    <span className={classeSituacao(situacao)}>{situacao}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </td>
+          <td onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", gap: 4 }}>
+              {podeValidar && (
+                <button type="button" className={s.iconBtn} title="Validar" onClick={() => onValidar(r.id)}><HiOutlineBeaker /></button>
+              )}
+              <button type="button" className={s.iconBtn} onClick={() => onDetalhe(r.id)} title="Ver detalhes"><HiOutlineEye /></button>
+              <button type="button" className={s.iconBtn} title="Editar" onClick={() => onEditar(r.id)}><HiOutlinePencilSquare /></button>
+              <button type="button" className={s.iconBtn} title="Excluir" onClick={() => onExcluir(r.id)}><HiOutlineTrash /></button>
+              <button type="button" className={s.iconBtn} title="Finalizar" onClick={() => onFinalizar(r)}><HiOutlineCheck /></button>
+              <button type="button" className={s.iconBtn} title="Abertura" onClick={() => onAbertura(r)}><HiOutlineBookOpen /></button>
+            </div>
+          </td>
+        </tr>
+        );
+      })}
+    </>
+  );
+}
 
 const formVazio = {
   ntoId: "",
@@ -43,7 +154,11 @@ export default function RastreabilidadePage() {
   const { usuario } = useAuth();
   const cargo = cargoDe(usuario?.cargo);
   const podeValidar = cargo === "Bioquímico" || cargo === "Coordenador";
-  const list = useList<RastreabilidadeLista>("/rastreabilidades");
+  const [filtroAnalito, setFiltroAnalito] = useState("");
+  const list = useList<RastreabilidadeGrupo | RastreabilidadeLista>("/rastreabilidades", undefined, {
+    agrupar: "analito",
+    analitoId: filtroAnalito || undefined,
+  });
   const catalogos = useCatalogos(["equipamentos", "fabricantes", "ntos", "setores", "analitos"]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -102,7 +217,7 @@ export default function RastreabilidadePage() {
     }
   }
 
-  async function abrirFinalizar(item: RastreabilidadeLista) {
+  async function abrirFinalizar(item: Pick<RastreabilidadeNoGrupo, "id">) {
     setErro("");
     try {
       const registro = await carregarDetalhe(item.id);
@@ -270,13 +385,27 @@ export default function RastreabilidadePage() {
       <Erro texto={modalAberto ? "" : mensagem()} />
 
       <div className={s.card}>
-        <div className={s.searchBar}>
-          <HiOutlineMagnifyingGlass className={s.searchIcon} />
-          <input
-            placeholder="Pesquisar por ID, equipamento, setor, fabricante, analito..."
-            value={list.q}
-            onChange={(e) => list.setQ(e.target.value)}
-          />
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+          <div className={s.searchBar} style={{ flex: 1, marginBottom: 0, minWidth: 240 }}>
+            <HiOutlineMagnifyingGlass className={s.searchIcon} />
+            <input
+              placeholder="Pesquisar por ID, equipamento, setor, fabricante, analito..."
+              value={list.q}
+              onChange={(e) => list.setQ(e.target.value)}
+            />
+          </div>
+          <select
+            className={s.formSelect}
+            style={{ width: 240 }}
+            value={filtroAnalito}
+            onChange={(e) => setFiltroAnalito(e.target.value)}
+            aria-label="Filtrar por analito"
+          >
+            <option value="">Todos os analitos</option>
+            {catalogos.analitos.map((item) => (
+              <option key={item.id} value={item.id}>{item.nome}</option>
+            ))}
+          </select>
         </div>
 
         <div className={s.tableWrapper}>
@@ -289,63 +418,91 @@ export default function RastreabilidadePage() {
                 <th>Equipamento</th>
                 <th>Material</th>
                 <th>Fabricante</th>
-                <th>Analito</th>
-                <th>Lotes</th>
-                <th>Criado Em</th>
+                <th>Aberturas</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {list.loading && (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Carregando...</td>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Carregando...</td>
                 </tr>
               )}
               {!list.loading && list.items.length === 0 && (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Nenhum registro encontrado</td>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Nenhum registro encontrado</td>
                 </tr>
               )}
-              {!list.loading && list.items.map((r) => (
-                <tr
-                  key={r.id}
-                  onClick={podeValidar ? () => abrirValidacao(r.id) : undefined}
-                  style={podeValidar ? { cursor: "pointer" } : undefined}
-                  title={podeValidar ? "Abrir validação" : undefined}
-                >
-                  <td style={{ fontWeight: 600 }}>{r.codigo}</td>
-                  <td>{r.nto}</td>
-                  <td><span className={s.badgePurple}>{r.setor}</span></td>
-                  <td>{r.equipamento}</td>
-                  <td>{r.tipoMaterial}</td>
-                  <td>{r.fabricante}</td>
-                  <td>{r.analito || "—"}</td>
-                  <td><span className={s.badgeBlue}>{r.lotes}</span></td>
-                  <td style={{ color: "var(--text-secondary)" }}>{formatDate(r.criadoEm)}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {podeValidar && (
-                        <button type="button" className={s.iconBtn} title="Validar" onClick={() => abrirValidacao(r.id)}><HiOutlineBeaker /></button>
-                      )}
-                      <button type="button" className={s.iconBtn} onClick={() => verDetalhe(r.id)} title="Ver detalhes"><HiOutlineEye /></button>
-                      <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(r.id)}><HiOutlinePencilSquare /></button>
-                      <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(r.id)}><HiOutlineTrash /></button>
-                      <button type="button" className={s.iconBtn} title="Finalizar" onClick={() => abrirFinalizar(r)}><HiOutlineCheck /></button>
-                      <button type="button" className={s.iconBtn} title="Abertura" onClick={() => {
-                        setErro("");
-                        setAbertura({
-                          id: r.id,
-                          codigo: r.codigo,
-                          numero: "",
-                          validade: "",
-                          data: "",
-                          responsavel: usuario?.nome ?? "",
-                        });
-                      }}><HiOutlineBookOpen /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {!list.loading && list.items.map((item) => {
+                if (!ehGrupo(item)) {
+                  return (
+                    <tr
+                      key={item.id}
+                      onClick={podeValidar ? () => abrirValidacao(item.id) : undefined}
+                      style={podeValidar ? { cursor: "pointer" } : undefined}
+                      title={podeValidar ? "Abrir validação" : undefined}
+                    >
+                      <td style={{ fontWeight: 600 }}>{item.codigo}</td>
+                      <td>{item.nto}</td>
+                      <td>{item.setor}</td>
+                      <td>{item.equipamento}</td>
+                      <td>{item.tipoMaterial}</td>
+                      <td>{item.fabricante}</td>
+                      <td>
+                        {item.analito ? <span className={s.badgePurple}>{item.analito}</span> : "—"}
+                        {typeof item.lotes === "number" ? <span className={s.badgeBlue} style={{ marginLeft: 8 }}>{item.lotes}</span> : null}
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {podeValidar && (
+                            <button type="button" className={s.iconBtn} title="Validar" onClick={() => abrirValidacao(item.id)}><HiOutlineBeaker /></button>
+                          )}
+                          <button type="button" className={s.iconBtn} onClick={() => verDetalhe(item.id)} title="Ver detalhes"><HiOutlineEye /></button>
+                          <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(item.id)}><HiOutlinePencilSquare /></button>
+                          <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(item.id)}><HiOutlineTrash /></button>
+                          <button type="button" className={s.iconBtn} title="Finalizar" onClick={() => abrirFinalizar(item)}><HiOutlineCheck /></button>
+                          <button type="button" className={s.iconBtn} title="Abertura" onClick={() => {
+                            setErro("");
+                            setAbertura({
+                              id: item.id,
+                              codigo: item.codigo,
+                              numero: "",
+                              validade: "",
+                              data: "",
+                              responsavel: usuario?.nome ?? "",
+                            });
+                          }}><HiOutlineBookOpen /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+                const erro = exibirErroTotal(item.erroTotalPermitido);
+                return (
+                  <GrupoAnalito
+                    key={item.analitoId ?? `sem-analito-${item.analito}`}
+                    grupo={item}
+                    erro={erro}
+                    podeValidar={podeValidar}
+                    onValidar={abrirValidacao}
+                    onDetalhe={verDetalhe}
+                    onEditar={abrirEdicao}
+                    onExcluir={excluir}
+                    onFinalizar={abrirFinalizar}
+                    onAbertura={(registro) => {
+                      setErro("");
+                      setAbertura({
+                        id: registro.id,
+                        codigo: registro.codigo,
+                        numero: "",
+                        validade: "",
+                        data: "",
+                        responsavel: usuario?.nome ?? "",
+                      });
+                    }}
+                  />
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -11,7 +11,7 @@ import s from "@/styles/shared.module.css";
 import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
-import { digitarErroTotal, erroTotalPermitidoValido, formatarErroTotal, formatDate, numeroOuTexto } from "@/lib/format";
+import { digitarErroTotal, erroTotalParaSalvar, exibirErroTotal, formatDate, numeroErroTotal } from "@/lib/format";
 import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
 import type { CadastroTipo, CatalogoItem } from "@/lib/types";
@@ -48,7 +48,7 @@ export default function CadastrosPage() {
 
   function abrirEdicao(item: CatalogoItem) {
     setErro("");
-    setModal({ id: item.id, nome: item.nome, erroTotalPermitido: formatarErroTotal(item.erroTotalPermitido) });
+    setModal({ id: item.id, nome: item.nome, erroTotalPermitido: numeroErroTotal(item.erroTotalPermitido) });
   }
 
   async function salvar(e: FormEvent) {
@@ -57,17 +57,13 @@ export default function CadastrosPage() {
       setErro("Informe o nome.");
       return;
     }
-    const erroTotal = formatarErroTotal(modal.erroTotalPermitido);
-    if (ehAnalito && !modal.erroTotalPermitido.trim()) {
-      setErro("Informe o erro total permitido.");
-      return;
-    }
-    if (ehAnalito && !erroTotalPermitidoValido(erroTotal)) {
-      setErro("Use o padrão 00,00.");
+    const erroTotal = erroTotalParaSalvar(modal.erroTotalPermitido);
+    if (ehAnalito && !erroTotal) {
+      setErro("Informe o erro total permitido apenas com números.");
       return;
     }
     const corpo = ehAnalito
-      ? { nome: modal.nome.trim(), erroTotalPermitido: numeroOuTexto(erroTotal) }
+      ? { nome: modal.nome.trim(), erroTotalPermitido: erroTotal }
       : { nome: modal.nome.trim() };
     setSalvando(true);
     setErro("");
@@ -181,7 +177,7 @@ export default function CadastrosPage() {
                 <tr key={item.id}>
                   <td style={{ fontWeight: 600 }}>{item.codigo}</td>
                   <td>{item.nome}</td>
-                  {ehAnalito && <td>{formatarErroTotal(item.erroTotalPermitido) || "—"}</td>}
+                  {ehAnalito && <td>{exibirErroTotal(item.erroTotalPermitido) || "—"}</td>}
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(item.criadoEm)}</td>
                   <td>{item.criadoPor || "—"}</td>
                   {podeGerenciar && (
@@ -223,14 +219,10 @@ export default function CadastrosPage() {
                       id="erroTotalPermitido"
                       className={s.formInput}
                       inputMode="decimal"
-                      placeholder="00,00"
+                      placeholder="Ex: 10,50"
                       value={modal.erroTotalPermitido}
                       onChange={(e) => {
                         const erroTotalPermitido = digitarErroTotal(e.target.value);
-                        setModal((atual) => (atual ? { ...atual, erroTotalPermitido } : atual));
-                      }}
-                      onBlur={(e) => {
-                        const erroTotalPermitido = formatarErroTotal(e.target.value);
                         setModal((atual) => (atual ? { ...atual, erroTotalPermitido } : atual));
                       }}
                     />

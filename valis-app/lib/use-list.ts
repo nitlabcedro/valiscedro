@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PAGE_SIZE, apiGet, mensagemErro } from "@/lib/api";
+import { PAGE_SIZE, apiGet, mensagemErro, type Query } from "@/lib/api";
 
-export function useList<T>(path: string | null, normalizar?: (q: string) => string) {
+export function useList<T>(path: string | null, normalizar?: (q: string) => string, query?: Query) {
+  const extra = JSON.stringify(query ?? {});
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [page, setPage] = useState(1);
@@ -20,7 +21,7 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
 
   useEffect(() => {
     setPage(1);
-  }, [path, debouncedQ]);
+  }, [path, debouncedQ, extra]);
 
   const reload = useCallback(() => setVersao((valor) => valor + 1), []);
 
@@ -36,7 +37,8 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
     setLoading(true);
     const consulta = normalizar ? normalizar(debouncedQ) : debouncedQ;
 
-    apiGet<T[]>(path, { q: consulta, page, pageSize: PAGE_SIZE }, controller.signal)
+    const params: Query = { q: consulta, page, pageSize: PAGE_SIZE, ...(JSON.parse(extra) as Query) };
+    apiGet<T[]>(path, params, controller.signal)
       .then((res) => {
         if (!Array.isArray(res.data)) {
           setItems([]);
@@ -61,7 +63,7 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
       });
 
     return () => controller.abort();
-  }, [path, debouncedQ, page, versao, normalizar]);
+  }, [path, debouncedQ, page, versao, normalizar, extra]);
 
   return { q, setQ, page, setPage, items, total, loading, erro, setErro, reload, pageSize: PAGE_SIZE };
 }
