@@ -231,6 +231,14 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.formInput[aria-invalid="true"] {
+  border-color: var(--accent-red);
+}
+
+.formInput[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
 .formSelect {
   composes: formInput;
   appearance: none;

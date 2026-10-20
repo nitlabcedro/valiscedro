@@ -338,7 +338,7 @@ export default function RastreabilidadePage() {
         loteId: abertos[0].id,
         lotes: abertos,
         fechamento: "",
-        responsavel: "",
+        responsavel: usuario?.nome ?? "",
       });
     } catch (erroCapturado) {
       setErro(mensagemErro(erroCapturado));

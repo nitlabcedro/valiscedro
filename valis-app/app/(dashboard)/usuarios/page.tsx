@@ -24,7 +24,12 @@ export default function UsuariosPage() {
   const router = useRouter();
   const { usuario, ready } = useAuth();
   const permitido = ready && isCoordenador(usuario);
-  const list = useList<UsuarioLista>(permitido ? "/usuarios" : null, buscaUsuario);
+  const [filtroNome, setFiltroNome] = useState("");
+  const [filtroCargo, setFiltroCargo] = useState<Cargo | "">("");
+  const list = useList<UsuarioLista>(permitido ? "/usuarios" : null, buscaUsuario, {
+    nome: filtroNome.trim() || undefined,
+    cargo: filtroCargo || undefined,
+  });
   const [editando, setEditando] = useState<UsuarioLista | null>(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -109,13 +114,35 @@ export default function UsuariosPage() {
       <Erro texto={editando ? "" : mensagem} />
 
       <div className={s.card}>
-        <div className={s.searchBar}>
-          <HiOutlineMagnifyingGlass className={s.searchIcon} />
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+          <div className={s.searchBar} style={{ flex: 1, marginBottom: 0, minWidth: 240 }}>
+            <HiOutlineMagnifyingGlass className={s.searchIcon} />
+            <input
+              placeholder="Pesquisar por nome, e-mail ou cargo..."
+              value={list.q}
+              onChange={(e) => list.setQ(e.target.value)}
+            />
+          </div>
           <input
-            placeholder="Pesquisar por nome, e-mail ou cargo..."
-            value={list.q}
-            onChange={(e) => list.setQ(e.target.value)}
+            className={s.formInput}
+            style={{ width: 240 }}
+            placeholder="Filtrar por nome"
+            value={filtroNome}
+            onChange={(e) => setFiltroNome(e.target.value)}
+            aria-label="Filtrar por nome"
           />
+          <select
+            className={s.formSelect}
+            style={{ width: 200 }}
+            value={filtroCargo}
+            onChange={(e) => setFiltroCargo(e.target.value as Cargo | "")}
+            aria-label="Filtrar por cargo"
+          >
+            <option value="">Todos os cargos</option>
+            {CARGOS.map((c) => (
+              <option key={c} value={c}>{cargoLabel(c)}</option>
+            ))}
+          </select>
         </div>
 
         <div className={s.tableWrapper}>

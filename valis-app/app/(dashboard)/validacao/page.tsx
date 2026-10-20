@@ -132,6 +132,8 @@ function ValidacaoConteudo() {
   const [nomes, setNomes] = useState({ equipamento: "", fabricante: "" });
   const [detalhe, setDetalhe] = useState<ValidacaoDetalhe | null>(null);
   const [origem, setOrigem] = useState<OrigemRastreio | null>(null);
+  const [tentouSalvar, setTentouSalvar] = useState(false);
+  const faltando = (vazio: boolean) => (tentouSalvar && vazio) || undefined;
 
   useEffect(() => {
     if (!rastreabilidadeId) return;
@@ -179,6 +181,7 @@ function ValidacaoConteudo() {
   function fecharModal() {
     setModal(null);
     setOrigem(null);
+    setTentouSalvar(false);
     if (rastreabilidadeId) router.replace("/validacao");
   }
 
@@ -289,6 +292,7 @@ function ValidacaoConteudo() {
 
   async function salvar(e: FormEvent) {
     e.preventDefault();
+    setTentouSalvar(true);
     if (!form.equipamentoId || !form.reagente.trim() || !form.fabricanteId || !form.tipoCriterio || !form.referencia.trim() || !form.erroTotal.trim()) {
       setErro("Preencha equipamento, analito, fabricante, critério, referência e erro total.");
       return;
@@ -457,28 +461,29 @@ function ValidacaoConteudo() {
                 </>
               )}
               <div className={s.formGrid}>
-                <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} />
+                <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} invalid={faltando(!form.equipamentoId)} />
                 <CatalogSelect
                   label="Analito"
                   value={form.analitoId}
                   onChange={escolherAnalito}
                   items={opcoesAnalito(catalogos.analitos, form.analitoId ? { id: form.analitoId, nome: form.reagente, erroTotalPermitido: form.erroTotal } : null)}
+                  invalid={faltando(!form.reagente.trim() || (!modal.id && !form.analitoId))}
                 />
-                <CatalogSelect label="Fabricante" value={form.fabricanteId} onChange={(fabricanteId) => setForm({ ...form, fabricanteId })} items={catalogos.fabricantes} />
+                <CatalogSelect label="Fabricante" value={form.fabricanteId} onChange={(fabricanteId) => setForm({ ...form, fabricanteId })} items={catalogos.fabricantes} invalid={faltando(!form.fabricanteId)} />
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Tipo de Critério</label>
-                  <select className={s.formSelect} value={form.tipoCriterio} onChange={(e) => setForm({ ...form, tipoCriterio: e.target.value as TipoCriterio })}>
+                  <select className={s.formSelect} value={form.tipoCriterio} aria-invalid={faltando(!form.tipoCriterio)} onChange={(e) => setForm({ ...form, tipoCriterio: e.target.value as TipoCriterio })}>
                     <option value="">Selecione...</option>
                     {TIPOS_CRITERIO.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
                   </select>
                 </div>
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Referência</label>
-                  <input className={s.formInput} placeholder="Ex: CLIA / RiliBAK" value={form.referencia} onChange={(e) => setForm({ ...form, referencia: e.target.value })} />
+                  <input className={s.formInput} placeholder="Ex: CLIA / RiliBAK" value={form.referencia} aria-invalid={faltando(!form.referencia.trim())} onChange={(e) => setForm({ ...form, referencia: e.target.value })} />
                 </div>
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Erro Total Permitido</label>
-                  <input className={s.formInput} value={form.erroTotal} readOnly placeholder="Selecione o analito" />
+                  <input className={s.formInput} value={form.erroTotal} readOnly placeholder="Selecione o analito" aria-invalid={faltando(!form.erroTotal.trim())} />
                 </div>
               </div>
 
@@ -486,8 +491,8 @@ function ValidacaoConteudo() {
                 <>
                   <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Lote</h3>
                   <div className={s.formGrid}>
-                    <div className={s.formGroup}><label className={s.formLabel}>Número do Lote</label><input className={s.formInput} placeholder="Ex: VL-2024-XX" value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
-                    <div className={s.formGroup}><label className={s.formLabel}>Data de Validade</label><input className={s.formInput} type="date" value={form.validade} onChange={(e) => setForm({ ...form, validade: e.target.value })} /></div>
+                    <div className={s.formGroup}><label className={s.formLabel}>Número do Lote</label><input className={s.formInput} placeholder="Ex: VL-2024-XX" value={form.numero} aria-invalid={faltando(!form.numero.trim())} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
+                    <div className={s.formGroup}><label className={s.formLabel}>Data de Validade</label><input className={s.formInput} type="date" value={form.validade} aria-invalid={faltando(!form.validade)} onChange={(e) => setForm({ ...form, validade: e.target.value })} /></div>
                   </div>
                 </>
               )}
@@ -531,15 +536,15 @@ function ValidacaoConteudo() {
                 <>
                   <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Validação</h3>
                   <div className={s.formGrid}>
-                    <div className={s.formGroup}><label className={s.formLabel}>Data</label><input className={s.formInput} type="date" value={form.controleData} onChange={(e) => setForm({ ...form, controleData: e.target.value })} /></div>
+                    <div className={s.formGroup}><label className={s.formLabel}>Data</label><input className={s.formInput} type="date" value={form.controleData} aria-invalid={faltando(!form.controleData)} onChange={(e) => setForm({ ...form, controleData: e.target.value })} /></div>
                   </div>
                   {form.resultados.map((resultado, indice) => (
                     <div key={`resultado-${indice}`}>
                       <h4 style={{ fontSize: 13, fontWeight: 600, margin: "20px 0 12px", color: "var(--text-secondary)" }}>Resultado {indice + 1}</h4>
                       <div className={s.formGrid}>
-                        <div className={s.formGroup}><label className={s.formLabel}>Valor de Referência</label><input className={s.formInput} placeholder="Valor" value={resultado.valorReferencia} onChange={(e) => atualizarResultado(indice, "valorReferencia", e.target.value)} /></div>
-                        <div className={s.formGroup}><label className={s.formLabel}>Erro Permitido</label><input className={s.formInput} value={resultado.erroPermitido} readOnly placeholder="Vem do erro total" /></div>
-                        <div className={s.formGroup}><label className={s.formLabel}>Valor Obtido</label><input className={s.formInput} placeholder="Resultado" value={resultado.valorObtido} onChange={(e) => atualizarResultado(indice, "valorObtido", e.target.value)} /></div>
+                        <div className={s.formGroup}><label className={s.formLabel}>Valor de Referência</label><input className={s.formInput} placeholder="Valor" value={resultado.valorReferencia} aria-invalid={faltando(!resultado.valorReferencia.trim())} onChange={(e) => atualizarResultado(indice, "valorReferencia", e.target.value)} /></div>
+                        <div className={s.formGroup}><label className={s.formLabel}>Erro Permitido</label><input className={s.formInput} value={resultado.erroPermitido} readOnly placeholder="Vem do erro total" aria-invalid={faltando(!resultado.erroPermitido.trim())} /></div>
+                        <div className={s.formGroup}><label className={s.formLabel}>Valor Obtido</label><input className={s.formInput} placeholder="Resultado" value={resultado.valorObtido} aria-invalid={faltando(!resultado.valorObtido.trim())} onChange={(e) => atualizarResultado(indice, "valorObtido", e.target.value)} /></div>
                       </div>
                     </div>
                   ))}
