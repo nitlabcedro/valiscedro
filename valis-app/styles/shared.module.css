@@ -45,7 +45,7 @@
 
 .btnPrimary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 30px rgba(7, 86, 24, 0.3);
 }
 
 .btnSecondary {
@@ -167,7 +167,7 @@
 .badgeBlue {
   composes: badge;
   background: rgba(59, 130, 246, 0.12);
-  color: var(--accent-blue);
+  color: #3b82f6;
 }
 
 .badgeGreen {
@@ -228,7 +228,7 @@
 
 .formInput:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(7, 86, 24, 0.1);
 }
 
 .formInput[aria-invalid="true"] {
@@ -463,4 +463,25 @@
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
 }

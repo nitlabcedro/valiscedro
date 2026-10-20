@@ -7,6 +7,7 @@ import p from "./perfil.module.css";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { apiSend, mensagemErro } from "@/lib/api";
 import { cargoLabel, emailValido, iniciais, senhaCabe } from "@/lib/format";
+import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
 import type { Usuario } from "@/lib/types";
 
@@ -99,7 +100,7 @@ export default function PerfilPage() {
         <div className={p.avatarInfo}>
           <h2>{nome}</h2>
           <p>{email}</p>
-          {usuario && <span className={p.profileBadge}>{cargoLabel(usuario.cargo)}</span>}
+          {usuario && <span className={`${p.profileBadge} ${classeSituacao(usuario.cargo)}`}>{cargoLabel(usuario.cargo)}</span>}
         </div>
       </div>
 

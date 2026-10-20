@@ -1,120 +1,228 @@
 .loginContainer {
-    display: flex;
-    min-height: 100vh;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--bg-primary);
-    background-image:
-        radial-gradient(at 0% 0%, rgba(7, 86, 24, 0.03) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(7, 86, 24, 0.05) 0px, transparent 50%);
-    padding: 24px;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #091a0f;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(7, 86, 24, 0.35), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(10, 123, 34, 0.18), transparent);
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+}
+
+/* Subtle grid pattern */
+.loginContainer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+  pointer-events: none;
+}
+
+/* Ambient glow behind card */
+.loginContainer::after {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(7, 86, 24, 0.15), transparent 60%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: breathe 10s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .loginCard {
-    width: 100%;
-    max-width: 440px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 48px 40px;
-    box-shadow: var(--shadow-lg);
-    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  color: var(--text-primary);
+  border-radius: 24px;
+  padding: 48px 40px;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.4),
+    0 0 80px rgba(7, 86, 24, 0.06);
+  position: relative;
+  z-index: 1;
+  animation: cardIn 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.loginCard input,
+.loginCard select {
+  padding: 12px 16px;
+  background-color: #f8faf9;
+  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  font-size: 14px;
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+
+.loginCard input:focus,
+.loginCard select:focus {
+  border-color: #075618;
+  box-shadow: 0 0 0 3px rgba(7, 86, 24, 0.1);
+  background-color: #fff;
+  outline: none;
+}
+
+.loginCard input::placeholder {
+  color: #9ca3af;
 }
 
 .brand {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 40px;
-    text-align: center;
-}
-
-.logoBox {
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #075618, #0a7b22);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    margin-bottom: 24px;
-    box-shadow: 0 10px 25px rgba(7, 86, 24, 0.2);
-}
-
-.brand h1 {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--text-primary);
-    letter-spacing: -0.03em;
-    margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 36px;
+  text-align: center;
 }
 
 .brand p {
-    font-size: 15px;
-    color: var(--text-secondary);
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.systemName {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #075618;
+  margin-top: 12px;
 }
 
 .form {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .forgotPassword {
-    display: block;
-    text-align: right;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--accent-blue);
-    margin-top: 8px;
-    transition: opacity var(--transition-fast);
+  display: block;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 500;
+  color: #075618;
+  margin-top: 6px;
+  transition: color 150ms ease;
 }
 
 .forgotPassword:hover {
-    opacity: 0.8;
+  color: #0a7b22;
 }
 
 .loginBtn {
-    width: 100%;
-    padding: 14px;
-    margin-top: 12px;
-    font-size: 15px;
-    justify-content: center;
-    border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #075618, #0a7b22);
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  box-shadow: 0 4px 15px rgba(7, 86, 24, 0.25);
+}
+
+.loginBtn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  pointer-events: none;
+}
+
+.loginBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(7, 86, 24, 0.35);
+}
+
+.loginBtn:hover:not(:disabled)::after {
+  animation: btnShimmer 0.6s ease;
+}
+
+.loginBtn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(7, 86, 24, 0.2);
+}
+
+.loginBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .footer {
-    margin-top: 32px;
-    text-align: center;
-    font-size: 13px;
-    color: var(--text-muted);
+  margin-top: 28px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .footer a {
-    font-weight: 600;
-    color: var(--accent-blue);
+  font-weight: 600;
+  color: #075618;
+  transition: color 150ms ease;
 }
 
 .footer a:hover {
-    opacity: 0.8;
+  color: #0a7b22;
 }
 
 .formError {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--accent-red);
+  font-size: 13px;
+  font-weight: 500;
+  color: #dc2626;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid rgba(220, 38, 38, 0.12);
+  border-radius: 10px;
+  line-height: 1.4;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+@keyframes breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+}
+
+@keyframes btnShimmer {
+  from { left: -100%; }
+  to { left: 100%; }
+}
+
+@media (max-width: 480px) {
+  .loginCard {
+    padding: 36px 24px;
+    border-radius: 20px;
+  }
 }

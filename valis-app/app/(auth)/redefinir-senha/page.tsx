@@ -95,7 +95,7 @@ function Formulario() {
               />
             </div>
             {erro && <p className={styles.formError}>{erro}</p>}
-            <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando || bloqueado}>
+            <button type="submit" className={styles.loginBtn} disabled={enviando || bloqueado}>
               {enviando ? "Salvando..." : "Redefinir senha"}
             </button>
           </form>

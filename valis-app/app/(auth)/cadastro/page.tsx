@@ -128,7 +128,7 @@ export default function CadastroPage() {
 
           {erro && <p className={styles.formError}>{erro}</p>}
 
-          <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando}>
+          <button type="submit" className={styles.loginBtn} disabled={enviando}>
             {enviando ? "Criando..." : "Criar conta"}
           </button>
         </form>

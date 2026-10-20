@@ -48,15 +48,14 @@ export default function LoginPage() {
     <div className={styles.loginContainer}>
       <div className={styles.loginCard}>
         <div className={styles.brand}>
-          <div className={styles.logo}>
-            <Image
-              src="/logoCedro.svg"
-              alt="Logo Cedro"
-              width={220}
-              height={80}
-              style={{ marginBottom: "0px", objectFit: "contain" }}
-            />
-          </div>
+          <Image
+            src="/logoCedro.svg"
+            alt="Logo Cedro"
+            width={200}
+            height={72}
+            style={{ objectFit: "contain" }}
+          />
+          <span className={styles.systemName}>Valis</span>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -82,7 +81,7 @@ export default function LoginPage() {
               id="senha"
               className={sharedStyles.formInput}
               type="password"
-              placeholder="senha"
+              placeholder="••••••••"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               autoComplete="current-password"
@@ -94,7 +93,7 @@ export default function LoginPage() {
 
           {erro && <p className={styles.formError}>{erro}</p>}
 
-          <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando || bloqueado}>
+          <button type="submit" className={styles.loginBtn} disabled={enviando || bloqueado}>
             {enviando ? "Entrando..." : "Acessar"}
           </button>
         </form>

@@ -1,5 +1,6 @@
 import Sidebar from "@/components/Sidebar/Sidebar";
 import SessionGate from "@/components/SessionGate/SessionGate";
+import styles from "./layout.module.css";
 
 export default function DashboardLayout({
   children,
@@ -8,9 +9,9 @@ export default function DashboardLayout({
 }) {
   return (
     <SessionGate>
-      <div style={{ display: "flex", minHeight: "100vh" }}>
+      <div className={styles.wrapper}>
         <Sidebar />
-        <main style={{ flex: 1, marginLeft: "var(--sidebar-collapsed)", padding: "32px", overflow: "auto", transition: "margin-left var(--transition-normal)" }}>
+        <main className={styles.main}>
           {children}
         </main>
       </div>
