@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   HiOutlinePlus,
   HiOutlineMagnifyingGlass,
@@ -76,6 +77,8 @@ export default function ConclusaoPage() {
   const catalogos = useCatalogos(["equipamentos", "analitos"]);
   const [form, setForm] = useState<FormControle>(formVazio);
   const [editId, setEditId] = useState<string | null>(null);
+  // Controle criado por uma validação: equipamento e exclusão seguem a validação (a API responde 409).
+  const [validacaoId, setValidacaoId] = useState<string | null>(null);
   const [codigo, setCodigo] = useState("");
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState("");
@@ -89,6 +92,7 @@ export default function ConclusaoPage() {
   function abrirNovo() {
     setErro("");
     setEditId(null);
+    setValidacaoId(null);
     setCodigo("");
     setForm(formVazio());
     setAberto(true);
@@ -99,6 +103,7 @@ export default function ConclusaoPage() {
     try {
       const res = await apiGet<ControleValidacao>(`/controles-validacao/${id}`);
       setEditId(res.data.id);
+      setValidacaoId(res.data.validacaoId ?? null);
       setCodigo(res.data.codigo);
       setForm(doRegistro(res.data));
       setAberto(true);
@@ -110,7 +115,7 @@ export default function ConclusaoPage() {
   function payload() {
     return {
       data: form.data,
-      equipamentoId: form.equipamentoId,
+      ...(validacaoId ? {} : { equipamentoId: form.equipamentoId }),
       analitoId: form.analitoId,
       ...(editId || form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
       resultados: form.resultados.map((resultado, indice) => ({
@@ -208,7 +213,13 @@ export default function ConclusaoPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className={classeSituacao(c.status)}>{c.status}</span>
                 <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(c.id)}><HiOutlinePencilSquare /></button>
-                <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(c.id)}><HiOutlineTrash /></button>
+                {c.validacaoId ? (
+                  <Link href={`/validacao?id=${encodeURIComponent(c.validacaoId)}`} style={{ fontSize: 12, fontWeight: 600, color: "var(--accent-blue)" }}>
+                    Ver validação
+                  </Link>
+                ) : (
+                  <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(c.id)}><HiOutlineTrash /></button>
+                )}
               </div>
             </div>
 
@@ -263,7 +274,14 @@ export default function ConclusaoPage() {
                   <label className={s.formLabel}>Data</label>
                   <input className={s.formInput} type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
                 </div>
-                <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} />
+                <CatalogSelect
+                  label="Equipamento"
+                  value={form.equipamentoId}
+                  onChange={(equipamentoId) => setForm({ ...form, equipamentoId })}
+                  items={catalogos.equipamentos}
+                  disabled={Boolean(validacaoId)}
+                  title={validacaoId ? "O equipamento segue o da validação. Altere pela validação." : undefined}
+                />
                 <CatalogSelect
                   label="Analito"
                   value={form.analitoId}

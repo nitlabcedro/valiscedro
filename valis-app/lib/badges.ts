@@ -17,6 +17,7 @@ export function classeSituacao(situacao: string) {
     case "Aberto":
       return s.badgeBlue;
     case "Coordenador":
+    case "Administrador":
       return s.badgePurple;
     case "Bioquímico":
       return s.badgeBlue;

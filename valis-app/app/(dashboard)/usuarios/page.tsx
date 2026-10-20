@@ -14,7 +14,7 @@ import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
 import { rotaInicial } from "@/lib/acesso";
 import { apiGet, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
-import { buscaUsuario, cargoLabel, emailValido, formatDate, iniciais } from "@/lib/format";
+import { cargoLabel, cargosAtribuiveis, emailValido, formatDate, iniciais } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
@@ -26,7 +26,10 @@ export default function UsuariosPage() {
   const permitido = ready && isCoordenador(usuario);
   const [filtroNome, setFiltroNome] = useState("");
   const [filtroCargo, setFiltroCargo] = useState<Cargo | "">("");
-  const list = useList<UsuarioLista>(permitido ? "/usuarios" : null, buscaUsuario, {
+  const souAdministrador = usuario?.cargo === "Administrador";
+  // Coordenador não edita nem exclui Administradores (a API responde 403).
+  const podeGerir = (alvo: UsuarioLista) => souAdministrador || alvo.cargo !== "Administrador";
+  const list = useList<UsuarioLista>(permitido ? "/usuarios" : null, undefined, {
     nome: filtroNome.trim() || undefined,
     cargo: filtroCargo || undefined,
   });
@@ -200,8 +203,16 @@ export default function UsuariosPage() {
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(u.criadoEm)}</td>
                   <td>
                     <div style={{ display: "flex", gap: 4 }}>
-                      <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(u.id)}><HiOutlinePencilSquare /></button>
-                      <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(u.id)}><HiOutlineTrash /></button>
+                      {podeGerir(u) ? (
+                        <>
+                          <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(u.id)}><HiOutlinePencilSquare /></button>
+                          {u.id !== usuario?.id && (
+                            <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(u.id)}><HiOutlineTrash /></button>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ color: "var(--text-secondary)" }} title="Somente um Administrador pode alterar outro Administrador.">—</span>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -228,8 +239,15 @@ export default function UsuariosPage() {
                 </div>
                 <div className={s.formGroup}>
                   <label className={s.formLabel} htmlFor="cargo">Cargo</label>
-                  <select id="cargo" className={s.formSelect} value={cargo} onChange={(e) => setCargo(e.target.value as Cargo)}>
-                    {CARGOS.map((c) => (
+                  <select
+                    id="cargo"
+                    className={s.formSelect}
+                    value={cargo}
+                    onChange={(e) => setCargo(e.target.value as Cargo)}
+                    disabled={editando.id === usuario?.id}
+                    title={editando.id === usuario?.id ? "Não é possível alterar o próprio cargo." : undefined}
+                  >
+                    {cargosAtribuiveis(usuario?.cargo).map((c) => (
                       <option key={c} value={c}>{cargoLabel(c)}</option>
                     ))}
                   </select>

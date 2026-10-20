@@ -1,4 +1,4 @@
-export const CARGOS = ["Técnico", "Bioquímico", "Coordenador"] as const;
+export const CARGOS = ["Técnico", "Bioquímico", "Coordenador", "Administrador"] as const;
 export type Cargo = (typeof CARGOS)[number];
 
 export const TIPOS_MATERIAL = ["Reagente"] as const;
@@ -131,7 +131,6 @@ export interface LoteValidacao {
   id?: string;
   numero: string;
   validade: string;
-  abertura: [string, string, string] | null;
   fechamento: [string, string, string] | null;
   preAnalise: [string, string, string] | null;
   posAnalise: [string, string, string] | null;

@@ -15,6 +15,7 @@ import { useList } from "@/lib/use-list";
 import { useCatalogos } from "@/lib/use-catalogos";
 import {
   dateInput,
+  erroTotalValido,
   formatDate,
   idPorNome,
   numeroOuTexto,
@@ -121,7 +122,9 @@ function CampoLeitura({ label, value }: { label: string; value: string }) {
 
 function ValidacaoConteudo() {
   const router = useRouter();
-  const rastreabilidadeId = useSearchParams().get("rastreabilidade");
+  const searchParams = useSearchParams();
+  const rastreabilidadeId = searchParams.get("rastreabilidade");
+  const validacaoAberta = searchParams.get("id");
   const list = useList<ValidacaoLista>("/validacoes");
   const catalogos = useCatalogos(["equipamentos", "fabricantes", "analitos"]);
   const [erro, setErro] = useState("");
@@ -177,6 +180,22 @@ function ValidacaoConteudo() {
       cancelado = true;
     };
   }, [rastreabilidadeId]);
+
+  // Link "Ver validação" vindo do Controle de Validação abre os detalhes direto.
+  useEffect(() => {
+    if (!validacaoAberta) return;
+    let cancelado = false;
+    apiGet<ValidacaoDetalhe>(`/validacoes/${validacaoAberta}`)
+      .then((res) => {
+        if (!cancelado) setDetalhe(res.data);
+      })
+      .catch((erroCapturado) => {
+        if (!cancelado) setErro(mensagemErro(erroCapturado));
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [validacaoAberta]);
 
   function fecharModal() {
     setModal(null);
@@ -297,6 +316,10 @@ function ValidacaoConteudo() {
       setErro("Preencha equipamento, analito, fabricante, critério, referência e erro total.");
       return;
     }
+    if (!erroTotalValido(form.erroTotal)) {
+      setErro("Erro total deve ser número ou percentual, como 10, 10,5 ou 10%.");
+      return;
+    }
 
     setSalvando(true);
     setErro("");
@@ -339,7 +362,7 @@ function ValidacaoConteudo() {
         if (fechamento) lote.fechamento = fechamento;
         if (preAnalise) lote.preAnalise = preAnalise;
         if (posAnalise) lote.posAnalise = posAnalise;
-        if ((form.situacao === "Aprovado" || form.situacao === "Rejeitado") && form.situacao !== situacaoInicial) {
+        if (form.situacao !== situacaoInicial) {
           lote.situacao = form.situacao;
         }
         await apiSend("PATCH", `/validacoes/${modal.id}`, {
@@ -483,7 +506,7 @@ function ValidacaoConteudo() {
                 </div>
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Erro Total Permitido</label>
-                  <input className={s.formInput} value={form.erroTotal} readOnly placeholder="Selecione o analito" aria-invalid={faltando(!form.erroTotal.trim())} />
+                  <input className={s.formInput} value={form.erroTotal} readOnly placeholder="Selecione o analito" aria-invalid={faltando(!erroTotalValido(form.erroTotal))} />
                 </div>
               </div>
 
@@ -599,7 +622,6 @@ function ValidacaoConteudo() {
                       <tr><th>Fase</th><th>R1</th><th>R2</th><th>R3</th></tr>
                     </thead>
                     <tbody>
-                      <tr><td>Abertura</td><td>{celula(lote.abertura?.[0])}</td><td>{celula(lote.abertura?.[1])}</td><td>{celula(lote.abertura?.[2])}</td></tr>
                       <tr><td>Fechamento</td><td>{celula(lote.fechamento?.[0])}</td><td>{celula(lote.fechamento?.[1])}</td><td>{celula(lote.fechamento?.[2])}</td></tr>
                       <tr><td>Pré-análise</td><td>{celula(lote.preAnalise?.[0])}</td><td>{celula(lote.preAnalise?.[1])}</td><td>{celula(lote.preAnalise?.[2])}</td></tr>
                       <tr><td>Pós-análise</td><td>{celula(lote.posAnalise?.[0])}</td><td>{celula(lote.posAnalise?.[1])}</td><td>{celula(lote.posAnalise?.[2])}</td></tr>

@@ -46,8 +46,14 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
           setErro("Resposta inesperada da API.");
           return;
         }
+        const totalAtual = res.total ?? res.data.length;
+        // Página ficou vazia (ex.: excluiu o último item dela): volta para a última página com itens.
+        if (res.data.length === 0 && page > 1) {
+          setPage(Math.max(1, Math.ceil(totalAtual / PAGE_SIZE)));
+          return;
+        }
         setItems(res.data);
-        setTotal(res.total ?? res.data.length);
+        setTotal(totalAtual);
         setErro("");
       })
       .catch((erroCapturado: unknown) => {

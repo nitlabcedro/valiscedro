@@ -8,6 +8,8 @@ export default function CatalogSelect({
   onChange,
   items,
   invalid,
+  disabled,
+  title,
 }: {
   id?: string;
   label: string;
@@ -15,11 +17,13 @@ export default function CatalogSelect({
   onChange: (id: string) => void;
   items: CatalogoItem[];
   invalid?: boolean;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <div className={s.formGroup}>
       <label className={s.formLabel} htmlFor={id}>{label}</label>
-      <select id={id} className={s.formSelect} value={value} aria-invalid={invalid || undefined} onChange={(e) => onChange(e.target.value)}>
+      <select id={id} className={s.formSelect} value={value} aria-invalid={invalid || undefined} disabled={disabled} title={title} onChange={(e) => onChange(e.target.value)}>
         <option value="">Selecione...</option>
         {items.map((item) => (
           <option key={item.id} value={item.id}>{item.nome}</option>

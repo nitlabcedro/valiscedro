@@ -7,9 +7,9 @@ import s from "@/styles/shared.module.css";
 import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
 import { rotaInicial } from "@/lib/acesso";
 import { apiSend, mensagemErro } from "@/lib/api";
-import { cargoLabel, emailValido } from "@/lib/format";
+import { cargoLabel, cargosAtribuiveis, emailValido } from "@/lib/format";
 import Erro from "@/components/Erro";
-import { CARGOS, type Cargo } from "@/lib/types";
+import type { Cargo } from "@/lib/types";
 
 export default function NovoUsuarioPage() {
   const router = useRouter();
@@ -95,7 +95,7 @@ export default function NovoUsuarioPage() {
                 onChange={(e) => setCargo(e.target.value)}
               >
                 <option value="">Selecione...</option>
-                {CARGOS.map((c) => (
+                {cargosAtribuiveis(usuario?.cargo).map((c) => (
                   <option key={c} value={c}>{cargoLabel(c)}</option>
                 ))}
               </select>

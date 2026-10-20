@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "../login.module.css";
-import { apiSend, mensagemErro } from "@/lib/api";
+import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { emailValido } from "@/lib/format";
 
 export default function EsqueciSenhaPage() {
@@ -13,6 +13,7 @@ export default function EsqueciSenhaPage() {
   const [erro, setErro] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [bloqueado, setBloqueado] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -26,6 +27,7 @@ export default function EsqueciSenhaPage() {
       await apiSend("POST", "/auth/esqueci-senha", { email: email.trim() });
       setEnviado(true);
     } catch (erroCapturado) {
+      if (erroCapturado instanceof ApiError && erroCapturado.status === 429) setBloqueado(true);
       setErro(mensagemErro(erroCapturado));
     } finally {
       setEnviando(false);
@@ -65,7 +67,7 @@ export default function EsqueciSenhaPage() {
               />
             </div>
             {erro && <p className={styles.formError}>{erro}</p>}
-            <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando}>
+            <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando || bloqueado}>
               {enviando ? "Enviando..." : "Enviar link"}
             </button>
           </form>

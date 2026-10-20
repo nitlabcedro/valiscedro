@@ -464,6 +464,11 @@ export default function RastreabilidadePage() {
       setErro("Preencha a data de fechamento e o responsável.");
       return;
     }
+    const aberturaLote = finalizar.lotes.find((lote) => lote.id === finalizar.loteId)?.abertura;
+    if (aberturaLote && finalizar.fechamento < aberturaLote) {
+      setErro("A data de fechamento não pode ser anterior à abertura.");
+      return;
+    }
     setSalvando(true);
     setErro("");
     try {
@@ -749,7 +754,12 @@ export default function RastreabilidadePage() {
                 </div>
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Data de Fechamento</label>
-                  <input className={s.formInput} type="date" value={finalizar.fechamento} onChange={(e) => setFinalizar({ ...finalizar, fechamento: e.target.value })} />
+                  <input
+                    className={s.formInput}
+                    type="date"
+                    min={finalizar.lotes.find((lote) => lote.id === finalizar.loteId)?.abertura || undefined}
+                    value={finalizar.fechamento}
+                    onChange={(e) => setFinalizar({ ...finalizar, fechamento: e.target.value })} />
                 </div>
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Responsável Fechamento</label>

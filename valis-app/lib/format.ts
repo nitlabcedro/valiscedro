@@ -1,11 +1,21 @@
-import type { CatalogoItem } from "@/lib/types";
+import { CARGOS, type CatalogoItem } from "@/lib/types";
 
 export function cargoLabel(cargo: string) {
-  return cargo === "Coordenador" ? "Coordenador" : cargo;
+  return cargo;
 }
 
-export function buscaUsuario(q: string) {
-  return q.replace(/administrador/gi, "Coordenador");
+// Só um Administrador pode atribuir o cargo Administrador.
+export function cargosAtribuiveis(cargoLogado: string | undefined) {
+  return CARGOS.filter((cargo) => cargo !== "Administrador" || cargoLogado === "Administrador");
+}
+
+// A API limita a senha a 72 bytes; letras acentuadas ocupam 2.
+export function senhaCabe(senha: string) {
+  return new TextEncoder().encode(senha).length <= 72;
+}
+
+export function erroTotalValido(valor: string) {
+  return /^\d+(?:[.,]\d+)?\s*%?$/.test(valor.trim());
 }
 
 export function iniciais(nome: string) {

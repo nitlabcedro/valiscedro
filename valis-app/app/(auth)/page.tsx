@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "./login.module.css";
-import { apiSend, mensagemErro } from "@/lib/api";
+import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { rotaInicial } from "@/lib/acesso";
 import type { Usuario } from "@/lib/types";
@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
+  // O bloqueio da API é por e-mail + IP, então trocar o e-mail libera o botão.
+  const [bloqueado, setBloqueado] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -35,6 +37,7 @@ export default function LoginPage() {
       setSession(data.token, data.usuario);
       router.push(rotaInicial(data.usuario.cargo));
     } catch (erroCapturado) {
+      if (erroCapturado instanceof ApiError && erroCapturado.status === 429) setBloqueado(true);
       setErro(mensagemErro(erroCapturado));
     } finally {
       setEnviando(false);
@@ -65,7 +68,10 @@ export default function LoginPage() {
               type="email"
               placeholder="nome@laboratorio.com.br"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setBloqueado(false);
+              }}
               autoComplete="email"
             />
           </div>
@@ -88,7 +94,7 @@ export default function LoginPage() {
 
           {erro && <p className={styles.formError}>{erro}</p>}
 
-          <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando}>
+          <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando || bloqueado}>
             {enviando ? "Entrando..." : "Acessar"}
           </button>
         </form>

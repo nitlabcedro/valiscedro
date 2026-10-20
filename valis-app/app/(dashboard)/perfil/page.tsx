@@ -6,7 +6,7 @@ import s from "@/styles/shared.module.css";
 import p from "./perfil.module.css";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { apiSend, mensagemErro } from "@/lib/api";
-import { cargoLabel, emailValido, iniciais } from "@/lib/format";
+import { cargoLabel, emailValido, iniciais, senhaCabe } from "@/lib/format";
 import Erro from "@/components/Erro";
 import type { Usuario } from "@/lib/types";
 
@@ -64,6 +64,10 @@ export default function PerfilPage() {
     }
     if (novaSenha.length < 6) {
       setErroSenha("A nova senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (!senhaCabe(novaSenha)) {
+      setErroSenha("Senha excede o tamanho máximo.");
       return;
     }
     if (novaSenha !== confirmarNovaSenha) {

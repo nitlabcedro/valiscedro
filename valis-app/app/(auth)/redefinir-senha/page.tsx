@@ -6,7 +6,8 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "../login.module.css";
-import { apiSend, mensagemErro } from "@/lib/api";
+import { ApiError, apiSend, mensagemErro } from "@/lib/api";
+import { senhaCabe } from "@/lib/format";
 
 function Formulario() {
   const params = useSearchParams();
@@ -16,6 +17,7 @@ function Formulario() {
   const [erro, setErro] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [bloqueado, setBloqueado] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -25,6 +27,10 @@ function Formulario() {
     }
     if (senha.length < 6) {
       setErro("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (!senhaCabe(senha)) {
+      setErro("Senha excede o tamanho máximo.");
       return;
     }
     if (senha !== confirmacao) {
@@ -37,6 +43,7 @@ function Formulario() {
       await apiSend("POST", "/auth/redefinir-senha", { token, senha });
       setEnviado(true);
     } catch (erroCapturado) {
+      if (erroCapturado instanceof ApiError && erroCapturado.status === 429) setBloqueado(true);
       setErro(mensagemErro(erroCapturado));
     } finally {
       setEnviando(false);
@@ -88,7 +95,7 @@ function Formulario() {
               />
             </div>
             {erro && <p className={styles.formError}>{erro}</p>}
-            <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando}>
+            <button type="submit" className={`${sharedStyles.btnPrimary} ${styles.loginBtn}`} disabled={enviando || bloqueado}>
               {enviando ? "Salvando..." : "Redefinir senha"}
             </button>
           </form>

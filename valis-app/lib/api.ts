@@ -1,4 +1,5 @@
-export const API_URL = "https://api-valis.labcedro.com.br";
+// Em desenvolvimento, aponte NEXT_PUBLIC_API_URL (.env.local) para a API local para não gravar em produção.
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api-valis.labcedro.com.br";
 export const PAGE_SIZE = 20;
 const TOKEN_KEY = "valis.token";
 

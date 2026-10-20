@@ -7,22 +7,20 @@ import { useRouter } from "next/navigation";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "../login.module.css";
 import { apiSend, mensagemErro } from "@/lib/api";
-import { cargoLabel, emailValido } from "@/lib/format";
-import { CARGOS, type Cargo } from "@/lib/types";
+import { emailValido, senhaCabe } from "@/lib/format";
 
 export default function CadastroPage() {
   const router = useRouter();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [cargo, setCargo] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!nome.trim() || !email.trim() || !cargo || !senha) {
-      setErro("Preencha nome, e-mail, cargo e senha.");
+    if (!nome.trim() || !email.trim() || !senha) {
+      setErro("Preencha nome, e-mail e senha.");
       return;
     }
     if (!emailValido(email)) {
@@ -33,13 +31,16 @@ export default function CadastroPage() {
       setErro("A senha precisa ter pelo menos 6 caracteres.");
       return;
     }
+    if (!senhaCabe(senha)) {
+      setErro("Senha excede o tamanho máximo.");
+      return;
+    }
     setErro("");
     setEnviando(true);
     try {
       await apiSend("POST", "/auth/cadastro", {
         nome: nome.trim(),
         email: email.trim(),
-        cargo: cargo as Cargo,
         senha,
       });
       router.push("/");
@@ -62,6 +63,7 @@ export default function CadastroPage() {
             style={{ marginBottom: "0px", objectFit: "contain" }}
           />
           <p>Crie sua conta para acessar o sistema</p>
+          <p style={{ fontSize: 13, marginTop: 4 }}>Outros cargos são liberados pela coordenação.</p>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -88,21 +90,6 @@ export default function CadastroPage() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
             />
-          </div>
-
-          <div className={sharedStyles.formGroup}>
-            <label className={sharedStyles.formLabel} htmlFor="cargo">Cargo</label>
-            <select
-              id="cargo"
-              className={sharedStyles.formSelect}
-              value={cargo}
-              onChange={(e) => setCargo(e.target.value)}
-            >
-              <option value="">Selecione...</option>
-              {CARGOS.map((c) => (
-                <option key={c} value={c}>{cargoLabel(c)}</option>
-              ))}
-            </select>
           </div>
 
           <div className={sharedStyles.formGroup}>

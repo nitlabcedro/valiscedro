@@ -15,6 +15,7 @@ import {
 } from "react-icons/hi2";
 import styles from "./Sidebar.module.css";
 import logo from "@/public/logoCedro.svg";
+import logoIco from "@/public/logoCedroIco.png";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { cargoDe, podeAcessar } from "@/lib/acesso";
@@ -59,18 +60,8 @@ export default function Sidebar() {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
-        <div className={styles.logoIcon}>V</div>
-        <div className={styles.logoText}>
-          <span className={styles.logoTitle}>
-            <Image
-              src={logo}
-              alt="Logo Cedro"
-              width={10}
-              height={10}
-              style={{ marginBottom: "0px", objectFit: "contain" }}
-            />
-          </span>
-        </div>
+        <Image src={logoIco} alt="Logo Cedro" className={styles.logoIcon} priority />
+        <Image src={logo} alt="Logo Cedro" className={styles.logoFull} priority />
       </div>
 
       <nav className={styles.nav}>
