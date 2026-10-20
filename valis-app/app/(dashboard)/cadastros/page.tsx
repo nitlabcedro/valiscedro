@@ -28,6 +28,7 @@ interface ModalCadastro {
   id?: string;
   nome: string;
   erroTotalPermitido: string;
+  referencial: string;
 }
 
 export default function CadastrosPage() {
@@ -43,12 +44,12 @@ export default function CadastrosPage() {
 
   function abrirNovo() {
     setErro("");
-    setModal({ nome: "", erroTotalPermitido: "" });
+    setModal({ nome: "", erroTotalPermitido: "", referencial: "" });
   }
 
   function abrirEdicao(item: CatalogoItem) {
     setErro("");
-    setModal({ id: item.id, nome: item.nome, erroTotalPermitido: numeroErroTotal(item.erroTotalPermitido) });
+    setModal({ id: item.id, nome: item.nome, erroTotalPermitido: numeroErroTotal(item.erroTotalPermitido), referencial: item.referencial ?? "" });
   }
 
   async function salvar(e: FormEvent) {
@@ -63,7 +64,7 @@ export default function CadastrosPage() {
       return;
     }
     const corpo = ehAnalito
-      ? { nome: modal.nome.trim(), erroTotalPermitido: erroTotal }
+      ? { nome: modal.nome.trim(), erroTotalPermitido: erroTotal, referencial: modal.referencial.trim() }
       : { nome: modal.nome.trim() };
     setSalvando(true);
     setErro("");
@@ -99,7 +100,7 @@ export default function CadastrosPage() {
   }
 
   const mensagem = modal ? "" : erro || list.erro;
-  const colunas = (podeGerenciar ? 5 : 4) + (ehAnalito ? 1 : 0);
+  const colunas = (podeGerenciar ? 5 : 4) + (ehAnalito ? 2 : 0);
 
   return (
     <div className={s.page}>
@@ -153,6 +154,7 @@ export default function CadastrosPage() {
                 <th>ID</th>
                 <th>Nome</th>
                 {ehAnalito && <th>Erro total permitido</th>}
+                {ehAnalito && <th>Referencial</th>}
                 <th>Criado Em</th>
                 <th>Criado Por</th>
                 {podeGerenciar && <th>Ações</th>}
@@ -178,6 +180,7 @@ export default function CadastrosPage() {
                   <td style={{ fontWeight: 600 }}>{item.codigo}</td>
                   <td>{item.nome}</td>
                   {ehAnalito && <td>{exibirErroTotal(item.erroTotalPermitido) || "—"}</td>}
+                  {ehAnalito && <td>{item.referencial ?? "—"}</td>}
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(item.criadoEm)}</td>
                   <td>{item.criadoPor || "—"}</td>
                   {podeGerenciar && (
@@ -225,6 +228,19 @@ export default function CadastrosPage() {
                         const erroTotalPermitido = digitarErroTotal(e.target.value);
                         setModal((atual) => (atual ? { ...atual, erroTotalPermitido } : atual));
                       }}
+                    />
+                  </div>
+                )}
+                {ehAnalito && (
+                  <div className={s.formGroup}>
+                    <label className={s.formLabel} htmlFor="referencial">Referencial</label>
+                    <input
+                      id="referencial"
+                      className={s.formInput}
+                      maxLength={200}
+                      placeholder="Ex: CLIA"
+                      value={modal.referencial}
+                      onChange={(e) => setModal({ ...modal, referencial: e.target.value })}
                     />
                   </div>
                 )}

@@ -47,14 +47,12 @@ interface FormValidacao {
   observacoes: string;
   numero: string;
   validade: string;
-  abertura: [string, string, string];
   fechamento: [string, string, string];
   preAnalise: [string, string, string];
   posAnalise: [string, string, string];
   situacao: string;
   controleData: string;
   analitoId: string;
-  loteControle: string;
   resultados: [ResultadoForm, ResultadoForm, ResultadoForm];
 }
 
@@ -73,14 +71,12 @@ function formVazio(): FormValidacao {
     observacoes: "",
     numero: "",
     validade: "",
-    abertura: tripleVazio(),
     fechamento: tripleVazio(),
     preAnalise: tripleVazio(),
     posAnalise: tripleVazio(),
     situacao: "Em andamento",
     controleData: "",
     analitoId: "",
-    loteControle: "",
     resultados: [resultadoVazio(), resultadoVazio(), resultadoVazio()],
   };
 }
@@ -221,12 +217,6 @@ function ValidacaoConteudo() {
     });
   }
 
-  function atualizarAbertura(indice: number, valor: string) {
-    const abertura = [...form.abertura] as [string, string, string];
-    abertura[indice] = valor;
-    setForm({ ...form, abertura });
-  }
-
   function atualizarTriplo(campo: "fechamento" | "preAnalise" | "posAnalise", indice: number, valor: string) {
     const proximo = [...form[campo]] as [string, string, string];
     proximo[indice] = valor;
@@ -267,14 +257,12 @@ function ValidacaoConteudo() {
         observacoes: registro.observacoes ?? "",
         numero: lote?.numero ?? "",
         validade: dateInput(lote?.validade),
-        abertura: triplePreenchido(lote?.abertura),
         fechamento: triplePreenchido(lote?.fechamento),
         preAnalise: triplePreenchido(lote?.preAnalise),
         posAnalise: triplePreenchido(lote?.posAnalise),
         situacao: lote?.situacao || registro.situacao || "Em andamento",
         controleData: dateInput(registro.controle?.data),
         analitoId: registro.controle?.analitoId ?? "",
-        loteControle: registro.controle?.loteControle ?? "",
         resultados: [0, 1, 2].map((indice) => {
           const resultado = registro.controle?.resultados?.find((item) => item.ordem === indice + 1);
           return {
@@ -310,13 +298,13 @@ function ValidacaoConteudo() {
     setErro("");
     try {
       if (!modal?.id) {
-        if (!form.numero.trim() || !form.validade || form.abertura.some((valor) => !valor.trim())) {
-          setErro("Preencha o lote e os três resultados de abertura.");
+        if (!form.numero.trim() || !form.validade) {
+          setErro("Preencha o número e a validade do lote.");
           setSalvando(false);
           return;
         }
-        if (!form.controleData || !form.analitoId || !form.loteControle.trim() || form.resultados.some((item) => !item.valorReferencia.trim() || !item.erroPermitido.trim() || !item.valorObtido.trim())) {
-          setErro("Preencha a data, o analito, o lote do controle e os três resultados.");
+        if (!form.controleData || !form.analitoId || form.resultados.some((item) => !item.valorReferencia.trim() || !item.erroPermitido.trim() || !item.valorObtido.trim())) {
+          setErro("Preencha a data, o analito e os três resultados.");
           setSalvando(false);
           return;
         }
@@ -331,12 +319,10 @@ function ValidacaoConteudo() {
           lote: {
             numero: form.numero.trim(),
             validade: form.validade,
-            abertura: form.abertura.map((valor) => valor.trim()) as [string, string, string],
           },
           controle: {
             data: form.controleData,
             analitoId: form.analitoId,
-            loteControle: form.loteControle.trim(),
             resultados: resultadosPayload(),
           },
         });
@@ -502,12 +488,6 @@ function ValidacaoConteudo() {
                   <div className={s.formGrid}>
                     <div className={s.formGroup}><label className={s.formLabel}>Número do Lote</label><input className={s.formInput} placeholder="Ex: VL-2024-XX" value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
                     <div className={s.formGroup}><label className={s.formLabel}>Data de Validade</label><input className={s.formInput} type="date" value={form.validade} onChange={(e) => setForm({ ...form, validade: e.target.value })} /></div>
-                    {form.abertura.map((valor, indice) => (
-                      <div className={s.formGroup} key={`abertura-${indice}`}>
-                        <label className={s.formLabel}>Abertura {indice + 1}</label>
-                        <input className={s.formInput} placeholder="Resultado" value={valor} onChange={(e) => atualizarAbertura(indice, e.target.value)} />
-                      </div>
-                    ))}
                   </div>
                 </>
               )}
@@ -549,10 +529,9 @@ function ValidacaoConteudo() {
 
               {!modal.id && (
                 <>
-                  <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Controle de Validação</h3>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Validação</h3>
                   <div className={s.formGrid}>
                     <div className={s.formGroup}><label className={s.formLabel}>Data</label><input className={s.formInput} type="date" value={form.controleData} onChange={(e) => setForm({ ...form, controleData: e.target.value })} /></div>
-                    <div className={s.formGroup}><label className={s.formLabel}>Lote do Controle</label><input className={s.formInput} placeholder="Ex: CTRL-2024-XX" value={form.loteControle} onChange={(e) => setForm({ ...form, loteControle: e.target.value })} /></div>
                   </div>
                   {form.resultados.map((resultado, indice) => (
                     <div key={`resultado-${indice}`}>
@@ -634,7 +613,7 @@ function ValidacaoConteudo() {
 
             {detalhe.controle && (
               <>
-                <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 12px", color: "var(--text-secondary)" }}>Controle de validação</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 12px", color: "var(--text-secondary)" }}>Validação</h3>
                 <div className={s.formGrid}>
                   <div className={s.formGroup}><span className={s.formLabel}>Data</span><span>{formatDate(detalhe.controle.data)}</span></div>
                   {detalhe.controle.analito && (
@@ -643,7 +622,6 @@ function ValidacaoConteudo() {
                   {detalhe.controle.erroTotalPermitido && (
                     <div className={s.formGroup}><span className={s.formLabel}>Erro total permitido</span><span>{detalhe.controle.erroTotalPermitido}</span></div>
                   )}
-                  <div className={s.formGroup}><span className={s.formLabel}>Lote</span><span>{detalhe.controle.loteControle}</span></div>
                   {detalhe.controle.status && (
                     <div className={s.formGroup}><span className={s.formLabel}>Status</span><span>{detalhe.controle.status}</span></div>
                   )}

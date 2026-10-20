@@ -32,7 +32,6 @@ interface FormControle {
   analitoId: string;
   analitoNome: string;
   erroTotalPermitido: string;
-  loteControle: string;
   observacoes: string;
   resultados: [ResultadoForm, ResultadoForm, ResultadoForm];
 }
@@ -48,7 +47,6 @@ function formVazio(): FormControle {
     analitoId: "",
     analitoNome: "",
     erroTotalPermitido: "",
-    loteControle: "",
     observacoes: "",
     resultados: [resultadoVazio(), resultadoVazio(), resultadoVazio()],
   };
@@ -61,7 +59,6 @@ function doRegistro(item: ControleValidacao): FormControle {
     analitoId: item.analitoId ?? "",
     analitoNome: item.analito ?? "",
     erroTotalPermitido: textoValor(item.erroTotalPermitido),
-    loteControle: item.loteControle,
     observacoes: item.observacoes ?? "",
     resultados: [1, 2, 3].map((ordem) => {
       const resultado = item.resultados.find((atual) => atual.ordem === ordem);
@@ -115,7 +112,6 @@ export default function ConclusaoPage() {
       data: form.data,
       equipamentoId: form.equipamentoId,
       analitoId: form.analitoId,
-      loteControle: form.loteControle.trim(),
       ...(editId || form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
       resultados: form.resultados.map((resultado, indice) => ({
         ordem: (indice + 1) as 1 | 2 | 3,
@@ -128,8 +124,8 @@ export default function ConclusaoPage() {
 
   async function salvar(e: FormEvent) {
     e.preventDefault();
-    if (!form.data || !form.equipamentoId || !form.analitoId || !form.loteControle.trim()) {
-      setErro("Preencha data, equipamento, analito e lote do controle.");
+    if (!form.data || !form.equipamentoId || !form.analitoId) {
+      setErro("Preencha data, equipamento e analito.");
       return;
     }
     if (form.resultados.some((item) => !item.valorReferencia.trim() || !item.erroPermitido.trim() || !item.valorObtido.trim())) {
@@ -205,7 +201,7 @@ export default function ConclusaoPage() {
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{c.codigo} — {c.analito}</div>
                 <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
-                  {c.equipamento} · Lote {c.loteControle}
+                  {c.equipamento}
                   {c.erroTotalPermitido ? ` · Erro total ${c.erroTotalPermitido}` : ""} · {formatDate(c.data)} · por {c.criadoPor}
                 </div>
               </div>
@@ -284,10 +280,6 @@ export default function ConclusaoPage() {
                   }}
                   items={opcoesAnalito(catalogos.analitos, { id: form.analitoId, nome: form.analitoNome, erroTotalPermitido: form.erroTotalPermitido })}
                 />
-                <div className={s.formGroup}>
-                  <label className={s.formLabel}>Lote do Controle</label>
-                  <input className={s.formInput} placeholder="Ex: CTRL-2024-XX" value={form.loteControle} onChange={(e) => setForm({ ...form, loteControle: e.target.value })} />
-                </div>
               </div>
 
               {form.resultados.map((resultado, indice) => (

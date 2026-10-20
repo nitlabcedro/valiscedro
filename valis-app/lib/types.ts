@@ -32,6 +32,7 @@ export interface CatalogoItem {
   criadoEm: string;
   criadoPor: string;
   erroTotalPermitido?: string | number;
+  referencial?: string | null;
 }
 
 export interface LoteRastreabilidade {
@@ -145,7 +146,6 @@ export interface ControleAninhado {
   analitoId?: string;
   analito?: string;
   erroTotalPermitido?: string | number;
-  loteControle: string;
   resultados: ResultadoControle[];
   status?: "Aprovado" | "Com rejeição" | string;
 }
@@ -181,7 +181,6 @@ export interface ControleValidacao {
   analitoId: string;
   analito: string;
   erroTotalPermitido?: string | number;
-  loteControle: string;
   observacoes?: string | null;
   criadoEm: string;
   criadoPor: string;
