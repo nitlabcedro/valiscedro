@@ -94,19 +94,6 @@ export function rotuloStatus(status: string) {
   return status;
 }
 
-export function tripleVazio(): [string, string, string] {
-  return ["", "", ""];
-}
-
-export function triplePreenchido(valor: [string, string, string] | null | undefined): [string, string, string] {
-  return [valor?.[0] ?? "", valor?.[1] ?? "", valor?.[2] ?? ""];
-}
-
-export function tripleOuUndefined(valor: [string, string, string]): [string, string, string] | undefined {
-  if (valor.every((item) => !item.trim())) return undefined;
-  return [valor[0].trim(), valor[1].trim(), valor[2].trim()];
-}
-
 export function digitarErroTotal(valor: string) {
   const limpo = valor.replace(/%/g, "").replace(/\./g, ",").replace(/[^\d,]/g, "");
   const temVirgula = limpo.includes(",");

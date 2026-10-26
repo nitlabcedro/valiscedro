@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   HiOutlinePlus,
   HiOutlineMagnifyingGlass,
-  HiOutlinePencilSquare,
   HiOutlineTrash,
   HiOutlineEye,
 } from "react-icons/hi2";
@@ -22,14 +21,12 @@ import {
   opcoesAnalito,
   rotuloStatus,
   textoValor,
-  tripleOuUndefined,
-  triplePreenchido,
-  tripleVazio,
 } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
+import MenuAcoes from "@/components/MenuAcoes";
 import { TIPOS_CRITERIO, type RastreabilidadeDetalhe, type TipoCriterio, type ValidacaoDetalhe, type ValidacaoLista } from "@/lib/types";
 
 interface ResultadoForm {
@@ -48,10 +45,6 @@ interface FormValidacao {
   observacoes: string;
   numero: string;
   validade: string;
-  fechamento: [string, string, string];
-  preAnalise: [string, string, string];
-  posAnalise: [string, string, string];
-  situacao: string;
   controleData: string;
   analitoId: string;
   resultados: [ResultadoForm, ResultadoForm, ResultadoForm];
@@ -72,18 +65,10 @@ function formVazio(): FormValidacao {
     observacoes: "",
     numero: "",
     validade: "",
-    fechamento: tripleVazio(),
-    preAnalise: tripleVazio(),
-    posAnalise: tripleVazio(),
-    situacao: "Em andamento",
     controleData: "",
     analitoId: "",
     resultados: [resultadoVazio(), resultadoVazio(), resultadoVazio()],
   };
-}
-
-function celula(valor: string | null | undefined) {
-  return valor ? valor : "—";
 }
 
 interface OrigemRastreio {
@@ -130,13 +115,14 @@ function ValidacaoConteudo() {
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [form, setForm] = useState<FormValidacao>(formVazio);
-  const [modal, setModal] = useState<null | { id?: string; codigo?: string }>(null);
-  const [situacaoInicial, setSituacaoInicial] = useState("Em andamento");
+  const [modal, setModal] = useState(false);
   const [nomes, setNomes] = useState({ equipamento: "", fabricante: "" });
   const [detalhe, setDetalhe] = useState<ValidacaoDetalhe | null>(null);
   const [origem, setOrigem] = useState<OrigemRastreio | null>(null);
   const [tentouSalvar, setTentouSalvar] = useState(false);
+  const [statusPorId, setStatusPorId] = useState<Record<string, string>>({});
   const faltando = (vazio: boolean) => (tentouSalvar && vazio) || undefined;
+  const concordancia = form.tipoCriterio === "Concordância clínica";
 
   useEffect(() => {
     if (!rastreabilidadeId) return;
@@ -149,7 +135,6 @@ function ValidacaoConteudo() {
         const lotes = registro.lotes ?? [];
         const lote = lotes.find((item) => !item.fechamento) ?? lotes[lotes.length - 1];
         setNomes({ equipamento: lote?.equipamento ?? "", fabricante: registro.fabricante });
-        setSituacaoInicial("Em andamento");
         setForm(comAnalito({
           ...formVazio(),
           equipamentoId: lote?.equipamentoId ?? "",
@@ -170,7 +155,7 @@ function ValidacaoConteudo() {
           abertura: lote?.abertura ?? "",
           responsavel: lote?.responsavelAbertura ?? "",
         });
-        setModal({});
+        setModal(true);
       })
       .catch((erroCapturado) => {
         if (cancelado) return;
@@ -180,6 +165,23 @@ function ValidacaoConteudo() {
       cancelado = true;
     };
   }, [rastreabilidadeId]);
+
+  // A listagem não traz o status do controle; ele só vem no detalhe de cada validação.
+  useEffect(() => {
+    const semStatus = list.items.filter((item) => item.statusControle === undefined);
+    if (semStatus.length === 0) return;
+    const controller = new AbortController();
+    Promise.all(
+      semStatus.map((item) =>
+        apiGet<ValidacaoDetalhe>(`/validacoes/${item.id}`, undefined, controller.signal)
+          .then((res) => [item.id, res.data.controle?.status ?? ""] as const)
+          .catch(() => [item.id, ""] as const),
+      ),
+    ).then((pares) => {
+      if (!controller.signal.aborted) setStatusPorId((atual) => ({ ...atual, ...Object.fromEntries(pares) }));
+    });
+    return () => controller.abort();
+  }, [list.items]);
 
   // Link "Ver validação" vindo do Controle de Validação abre os detalhes direto.
   useEffect(() => {
@@ -198,7 +200,7 @@ function ValidacaoConteudo() {
   }, [validacaoAberta]);
 
   function fecharModal() {
-    setModal(null);
+    setModal(false);
     setOrigem(null);
     setTentouSalvar(false);
     if (rastreabilidadeId) router.replace("/validacao");
@@ -239,12 +241,6 @@ function ValidacaoConteudo() {
     });
   }
 
-  function atualizarTriplo(campo: "fechamento" | "preAnalise" | "posAnalise", indice: number, valor: string) {
-    const proximo = [...form[campo]] as [string, string, string];
-    proximo[indice] = valor;
-    setForm({ ...form, [campo]: proximo });
-  }
-
   function atualizarResultado(indice: number, campo: keyof ResultadoForm, valor: string) {
     const resultados = form.resultados.map((item, i) => (i === indice ? { ...item, [campo]: valor } : item)) as FormValidacao["resultados"];
     setForm({ ...form, resultados });
@@ -260,53 +256,18 @@ function ValidacaoConteudo() {
     }
   }
 
-  async function abrirEdicao(id: string) {
-    setErro("");
-    try {
-      const res = await apiGet<ValidacaoDetalhe>(`/validacoes/${id}`);
-      const registro = res.data;
-      const lote = registro.lotes?.[0];
-      setNomes({ equipamento: registro.equipamento, fabricante: registro.fabricante });
-      setSituacaoInicial(lote?.situacao || registro.situacao || "Em andamento");
-      setForm({
-        ...formVazio(),
-        equipamentoId: idPorNome(catalogos.equipamentos, registro.equipamento, registro.equipamentoId),
-        reagente: registro.reagente,
-        fabricanteId: idPorNome(catalogos.fabricantes, registro.fabricante, registro.fabricanteId),
-        tipoCriterio: (registro.tipoCriterio as TipoCriterio) || "",
-        referencia: registro.referencia ?? "",
-        erroTotal: textoValor(registro.erroTotal),
-        observacoes: registro.observacoes ?? "",
-        numero: lote?.numero ?? "",
-        validade: dateInput(lote?.validade),
-        fechamento: triplePreenchido(lote?.fechamento),
-        preAnalise: triplePreenchido(lote?.preAnalise),
-        posAnalise: triplePreenchido(lote?.posAnalise),
-        situacao: lote?.situacao || registro.situacao || "Em andamento",
-        controleData: dateInput(registro.controle?.data),
-        analitoId: registro.controle?.analitoId ?? "",
-        resultados: [0, 1, 2].map((indice) => {
-          const resultado = registro.controle?.resultados?.find((item) => item.ordem === indice + 1);
-          return {
-            valorReferencia: textoValor(resultado?.valorReferencia),
-            erroPermitido: textoValor(resultado?.erroPermitido),
-            valorObtido: textoValor(resultado?.valorObtido),
-          };
-        }) as FormValidacao["resultados"],
-      });
-      setModal({ id: registro.id, codigo: registro.codigo });
-    } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
-    }
-  }
-
   function resultadosPayload() {
-    return form.resultados.map((resultado, indice) => ({
-      ordem: (indice + 1) as 1 | 2 | 3,
-      valorReferencia: numeroOuTexto(resultado.valorReferencia),
-      erroPermitido: numeroOuTexto(resultado.erroPermitido),
-      valorObtido: numeroOuTexto(resultado.valorObtido),
-    }));
+    return form.resultados
+      .map((resultado, indice) => ({
+        ordem: (indice + 1) as 1 | 2 | 3,
+        valorReferencia: numeroOuTexto(resultado.valorReferencia),
+        ...(concordancia ? {} : { erroPermitido: numeroOuTexto(resultado.erroPermitido) }),
+        valorObtido: numeroOuTexto(resultado.valorObtido),
+      }))
+      .filter((_, indice) => {
+        const r = form.resultados[indice];
+        return r.valorReferencia.trim() && (concordancia || r.erroPermitido.trim()) && r.valorObtido.trim();
+      });
   }
 
   async function salvar(e: FormEvent) {
@@ -320,62 +281,37 @@ function ValidacaoConteudo() {
       setErro("Erro total deve ser número ou percentual, como 10, 10,5 ou 10%.");
       return;
     }
+    if (!form.numero.trim() || !form.validade) {
+      setErro("Preencha o número e a validade do lote.");
+      return;
+    }
+    const r1 = form.resultados[0];
+    if (!form.controleData || !form.analitoId || !r1.valorReferencia.trim() || (!concordancia && !r1.erroPermitido.trim()) || !r1.valorObtido.trim()) {
+      setErro("Preencha a data, o analito e o primeiro resultado.");
+      return;
+    }
 
     setSalvando(true);
     setErro("");
     try {
-      if (!modal?.id) {
-        if (!form.numero.trim() || !form.validade) {
-          setErro("Preencha o número e a validade do lote.");
-          setSalvando(false);
-          return;
-        }
-        if (!form.controleData || !form.analitoId || form.resultados.some((item) => !item.valorReferencia.trim() || !item.erroPermitido.trim() || !item.valorObtido.trim())) {
-          setErro("Preencha a data, o analito e os três resultados.");
-          setSalvando(false);
-          return;
-        }
-        await apiSend("POST", "/validacoes", {
-          equipamentoId: form.equipamentoId,
-          reagente: form.reagente.trim(),
-          fabricanteId: form.fabricanteId,
-          tipoCriterio: form.tipoCriterio,
-          referencia: form.referencia.trim(),
-          erroTotal: numeroOuTexto(form.erroTotal),
-          ...(form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
-          lote: {
-            numero: form.numero.trim(),
-            validade: form.validade,
-          },
-          controle: {
-            data: form.controleData,
-            analitoId: form.analitoId,
-            resultados: resultadosPayload(),
-          },
-        });
-      } else {
-        const lote: Record<string, unknown> = {};
-        if (form.validade) lote.validade = form.validade;
-        const fechamento = tripleOuUndefined(form.fechamento);
-        const preAnalise = tripleOuUndefined(form.preAnalise);
-        const posAnalise = tripleOuUndefined(form.posAnalise);
-        if (fechamento) lote.fechamento = fechamento;
-        if (preAnalise) lote.preAnalise = preAnalise;
-        if (posAnalise) lote.posAnalise = posAnalise;
-        if (form.situacao !== situacaoInicial) {
-          lote.situacao = form.situacao;
-        }
-        await apiSend("PATCH", `/validacoes/${modal.id}`, {
-          equipamentoId: form.equipamentoId,
-          reagente: form.reagente.trim(),
-          fabricanteId: form.fabricanteId,
-          tipoCriterio: form.tipoCriterio,
-          referencia: form.referencia.trim(),
-          erroTotal: numeroOuTexto(form.erroTotal),
-          ...(form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
-          ...(Object.keys(lote).length > 0 ? { lote } : {}),
-        });
-      }
+      await apiSend("POST", "/validacoes", {
+        equipamentoId: form.equipamentoId,
+        reagente: form.reagente.trim(),
+        fabricanteId: form.fabricanteId,
+        tipoCriterio: form.tipoCriterio,
+        referencia: form.referencia.trim(),
+        erroTotal: numeroOuTexto(form.erroTotal),
+        ...(form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
+        lote: {
+          numero: form.numero.trim(),
+          validade: form.validade,
+        },
+        controle: {
+          data: form.controleData,
+          analitoId: form.analitoId,
+          resultados: resultadosPayload(),
+        },
+      });
       fecharModal();
       list.reload();
     } catch (erroCapturado) {
@@ -404,7 +340,7 @@ function ValidacaoConteudo() {
           <p>Registre e acompanhe as validações de reagentes e analitos</p>
         </div>
         <div className={s.headerActions}>
-          <button type="button" className={s.btnPrimary} onClick={() => { setErro(""); setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setModal({}); if (rastreabilidadeId) router.replace("/validacao"); }}>
+          <button type="button" className={s.btnPrimary} onClick={() => { setErro(""); setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setModal(true); if (rastreabilidadeId) router.replace("/validacao"); }}>
             <HiOutlinePlus /> Nova Validação
           </button>
         </div>
@@ -429,18 +365,21 @@ function ValidacaoConteudo() {
                 <th>Critério</th>
                 <th>Erro Total</th>
                 <th>Situação</th>
+                <th>Status</th>
                 <th>Criado Em</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {list.loading && (
-                <tr><td colSpan={9} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Carregando...</td></tr>
+                <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Carregando...</td></tr>
               )}
               {!list.loading && list.items.length === 0 && (
-                <tr><td colSpan={9} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Nenhuma validação encontrada</td></tr>
+                <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 16px" }}>Nenhuma validação encontrada</td></tr>
               )}
-              {!list.loading && list.items.map((v) => (
+              {!list.loading && list.items.map((v) => {
+                const statusControle = v.statusControle ?? statusPorId[v.id];
+                return (
                 <tr key={v.id}>
                   <td style={{ fontWeight: 600 }}>{v.codigo}</td>
                   <td>{v.equipamento}</td>
@@ -449,16 +388,19 @@ function ValidacaoConteudo() {
                   <td><span className={s.badgePurple}>{v.tipoCriterio}</span></td>
                   <td>{textoValor(v.erroTotal)}</td>
                   <td><span className={classeSituacao(v.situacao)}>{v.situacao}</span></td>
+                  <td>{statusControle ? <span className={classeSituacao(statusControle)}>{statusControle}</span> : "—"}</td>
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(v.criadoEm)}</td>
                   <td>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <button type="button" className={s.iconBtn} onClick={() => verDetalhe(v.id)} title="Ver detalhes"><HiOutlineEye /></button>
-                      <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(v.id)}><HiOutlinePencilSquare /></button>
-                      <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(v.id)}><HiOutlineTrash /></button>
-                    </div>
+                    <MenuAcoes
+                      acoes={[
+                        { rotulo: "Ver detalhes", icone: <HiOutlineEye />, onClick: () => verDetalhe(v.id) },
+                        { rotulo: "Excluir", icone: <HiOutlineTrash />, onClick: () => excluir(v.id), perigo: true },
+                      ]}
+                    />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -468,9 +410,9 @@ function ValidacaoConteudo() {
       {modal && (
         <div className={s.modalOverlay} onClick={fecharModal}>
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={s.modalTitle}>{modal.id ? `Editar ${modal.codigo}` : "Nova Validação"}</h2>
+            <h2 className={s.modalTitle}>Nova Validação</h2>
             <form onSubmit={salvar}>
-              {origem && !modal.id && (
+              {origem && (
                 <>
                   <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 16px", color: "var(--text-secondary)" }}>Rastreabilidade {origem.codigo}</h3>
                   <div className={s.formGrid}>
@@ -490,7 +432,7 @@ function ValidacaoConteudo() {
                   value={form.analitoId}
                   onChange={escolherAnalito}
                   items={opcoesAnalito(catalogos.analitos, form.analitoId ? { id: form.analitoId, nome: form.reagente, erroTotalPermitido: form.erroTotal } : null)}
-                  invalid={faltando(!form.reagente.trim() || (!modal.id && !form.analitoId))}
+                  invalid={faltando(!form.reagente.trim() || !form.analitoId)}
                 />
                 <CatalogSelect label="Fabricante" value={form.fabricanteId} onChange={(fabricanteId) => setForm({ ...form, fabricanteId })} items={catalogos.fabricantes} invalid={faltando(!form.fabricanteId)} />
                 <div className={s.formGroup}>
@@ -510,69 +452,50 @@ function ValidacaoConteudo() {
                 </div>
               </div>
 
-              {!modal.id && (
-                <>
-                  <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Lote</h3>
-                  <div className={s.formGrid}>
-                    <div className={s.formGroup}><label className={s.formLabel}>Número do Lote</label><input className={s.formInput} placeholder="Ex: VL-2024-XX" value={form.numero} aria-invalid={faltando(!form.numero.trim())} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
-                    <div className={s.formGroup}><label className={s.formLabel}>Data de Validade</label><input className={s.formInput} type="date" value={form.validade} aria-invalid={faltando(!form.validade)} onChange={(e) => setForm({ ...form, validade: e.target.value })} /></div>
-                  </div>
-                </>
-              )}
+              <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Lote</h3>
+              <div className={s.formGrid}>
+                <div className={s.formGroup}><label className={s.formLabel}>Número do Lote</label><input className={s.formInput} placeholder="Ex: VL-2024-XX" value={form.numero} aria-invalid={faltando(!form.numero.trim())} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
+                <div className={s.formGroup}><label className={s.formLabel}>Data de Validade</label><input className={s.formInput} type="date" value={form.validade} aria-invalid={faltando(!form.validade)} onChange={(e) => setForm({ ...form, validade: e.target.value })} /></div>
+              </div>
 
-              {modal.id && (
-                <>
-                  <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Lote {form.numero}</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Validação</h3>
+              <div className={s.formGrid}>
+                <div className={s.formGroup}><label className={s.formLabel}>Data</label><input className={s.formInput} type="date" value={form.controleData} aria-invalid={faltando(!form.controleData)} onChange={(e) => setForm({ ...form, controleData: e.target.value })} /></div>
+              </div>
+              {form.resultados.map((resultado, indice) => (
+                <div key={`resultado-${indice}`}>
+                  <h4 style={{ fontSize: 13, fontWeight: 600, margin: "20px 0 12px", color: "var(--text-secondary)" }}>Resultado {indice + 1}</h4>
                   <div className={s.formGrid}>
                     <div className={s.formGroup}>
-                      <label className={s.formLabel}>Data de Validade</label>
-                      <input className={s.formInput} type="date" value={form.validade} onChange={(e) => setForm({ ...form, validade: e.target.value })} />
+                      <label className={s.formLabel}>Valor de Referência</label>
+                      {concordancia ? (
+                        <select className={s.formSelect} value={resultado.valorReferencia} aria-invalid={indice === 0 ? faltando(!resultado.valorReferencia.trim()) : undefined} onChange={(e) => atualizarResultado(indice, "valorReferencia", e.target.value)}>
+                          <option value="">Selecione...</option>
+                          <option value="Reagente">Reagente</option>
+                          <option value="Não Reagente">Não Reagente</option>
+                        </select>
+                      ) : (
+                        <input className={s.formInput} placeholder="Valor" value={resultado.valorReferencia} aria-invalid={indice === 0 ? faltando(!resultado.valorReferencia.trim()) : undefined} onChange={(e) => atualizarResultado(indice, "valorReferencia", e.target.value)} />
+                      )}
                     </div>
+                    {!concordancia && (
+                      <div className={s.formGroup}><label className={s.formLabel}>Erro Permitido</label><input className={s.formInput} value={resultado.erroPermitido} readOnly placeholder="Vem do erro total" aria-invalid={indice === 0 ? faltando(!resultado.erroPermitido.trim()) : undefined} /></div>
+                    )}
                     <div className={s.formGroup}>
-                      <label className={s.formLabel}>Situação</label>
-                      <select className={s.formSelect} value={form.situacao} onChange={(e) => setForm({ ...form, situacao: e.target.value })}>
-                        <option value="Em andamento">Em andamento</option>
-                        <option value="Aprovado">Aprovado</option>
-                        <option value="Rejeitado">Rejeitado</option>
-                      </select>
+                      <label className={s.formLabel}>Valor Obtido</label>
+                      {concordancia ? (
+                        <select className={s.formSelect} value={resultado.valorObtido} aria-invalid={indice === 0 ? faltando(!resultado.valorObtido.trim()) : undefined} onChange={(e) => atualizarResultado(indice, "valorObtido", e.target.value)}>
+                          <option value="">Selecione...</option>
+                          <option value="Reagente">Reagente</option>
+                          <option value="Não Reagente">Não Reagente</option>
+                        </select>
+                      ) : (
+                        <input className={s.formInput} placeholder="Resultado" value={resultado.valorObtido} aria-invalid={indice === 0 ? faltando(!resultado.valorObtido.trim()) : undefined} onChange={(e) => atualizarResultado(indice, "valorObtido", e.target.value)} />
+                      )}
                     </div>
                   </div>
-                  {(["fechamento", "preAnalise", "posAnalise"] as const).map((campo) => (
-                    <div key={campo}>
-                      <h4 style={{ fontSize: 13, fontWeight: 600, margin: "20px 0 12px", color: "var(--text-secondary)" }}>
-                        {campo === "fechamento" ? "Fechamento" : campo === "preAnalise" ? "Pré-análise" : "Pós-análise"}
-                      </h4>
-                      <div className={s.formGrid}>
-                        {form[campo].map((valor, indice) => (
-                          <div className={s.formGroup} key={`${campo}-${indice}`}>
-                            <label className={s.formLabel}>R{indice + 1}</label>
-                            <input className={s.formInput} value={valor} onChange={(e) => atualizarTriplo(campo, indice, e.target.value)} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {!modal.id && (
-                <>
-                  <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Validação</h3>
-                  <div className={s.formGrid}>
-                    <div className={s.formGroup}><label className={s.formLabel}>Data</label><input className={s.formInput} type="date" value={form.controleData} aria-invalid={faltando(!form.controleData)} onChange={(e) => setForm({ ...form, controleData: e.target.value })} /></div>
-                  </div>
-                  {form.resultados.map((resultado, indice) => (
-                    <div key={`resultado-${indice}`}>
-                      <h4 style={{ fontSize: 13, fontWeight: 600, margin: "20px 0 12px", color: "var(--text-secondary)" }}>Resultado {indice + 1}</h4>
-                      <div className={s.formGrid}>
-                        <div className={s.formGroup}><label className={s.formLabel}>Valor de Referência</label><input className={s.formInput} placeholder="Valor" value={resultado.valorReferencia} aria-invalid={faltando(!resultado.valorReferencia.trim())} onChange={(e) => atualizarResultado(indice, "valorReferencia", e.target.value)} /></div>
-                        <div className={s.formGroup}><label className={s.formLabel}>Erro Permitido</label><input className={s.formInput} value={resultado.erroPermitido} readOnly placeholder="Vem do erro total" aria-invalid={faltando(!resultado.erroPermitido.trim())} /></div>
-                        <div className={s.formGroup}><label className={s.formLabel}>Valor Obtido</label><input className={s.formInput} placeholder="Resultado" value={resultado.valorObtido} aria-invalid={faltando(!resultado.valorObtido.trim())} onChange={(e) => atualizarResultado(indice, "valorObtido", e.target.value)} /></div>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
+                </div>
+              ))}
 
               <div className={s.formGroup} style={{ marginTop: 20 }}>
                 <label className={s.formLabel}>Observações</label>
@@ -607,35 +530,6 @@ function ValidacaoConteudo() {
                 <span className={s.formLabel}>Observações</span>
                 <span>{detalhe.observacoes}</span>
               </div>
-            )}
-
-            <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 12px", color: "var(--text-secondary)" }}>Resultados do Lote</h3>
-            {detalhe.lotes?.length ? detalhe.lotes.map((lote) => (
-              <div key={lote.numero} className={s.card} style={{ marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <span style={{ fontWeight: 600 }}>{lote.numero}</span>
-                  <span className={classeSituacao(lote.situacao)}>{lote.situacao}</span>
-                </div>
-                <div className={s.tableWrapper}>
-                  <table className={s.table}>
-                    <thead>
-                      <tr><th>Fase</th><th>R1</th><th>R2</th><th>R3</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td>Fechamento</td><td>{celula(lote.fechamento?.[0])}</td><td>{celula(lote.fechamento?.[1])}</td><td>{celula(lote.fechamento?.[2])}</td></tr>
-                      <tr><td>Pré-análise</td><td>{celula(lote.preAnalise?.[0])}</td><td>{celula(lote.preAnalise?.[1])}</td><td>{celula(lote.preAnalise?.[2])}</td></tr>
-                      <tr><td>Pós-análise</td><td>{celula(lote.posAnalise?.[0])}</td><td>{celula(lote.posAnalise?.[1])}</td><td>{celula(lote.posAnalise?.[2])}</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-                {lote.responsavelValidacao && (
-                  <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-secondary)" }}>
-                    Validado por <strong style={{ color: "var(--text-primary)" }}>{lote.responsavelValidacao}</strong> em {formatDate(lote.dataValidacao)}
-                  </div>
-                )}
-              </div>
-            )) : (
-              <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>Nenhum lote</span>
             )}
 
             {detalhe.controle && (

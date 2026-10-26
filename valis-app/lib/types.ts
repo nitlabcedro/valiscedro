@@ -158,6 +158,7 @@ export interface ValidacaoLista {
   tipoCriterio: string;
   erroTotal: string | number;
   situacao: "Em andamento" | "Aprovado" | "Rejeitado";
+  statusControle?: "Aprovado" | "Com rejeição" | null;
   criadoEm: string;
   criadoPor: string;
 }

@@ -8,6 +8,7 @@ import {
   HiOutlineClipboardDocumentList,
   HiOutlineBeaker,
   HiOutlineChartBar,
+  HiOutlineDocumentChartBar,
   HiOutlineUsers,
   HiOutlineUserCircle,
   HiOutlineBuildingOffice2,
@@ -29,6 +30,7 @@ const navItems: { section: string; items: { label: string; href: string; icon: t
       { label: "Rastreabilidade", href: "/rastreabilidade", icon: HiOutlineClipboardDocumentList },
       { label: "Validação", href: "/validacao", icon: HiOutlineBeaker },
       { label: "Controle de Validação", href: "/conclusao", icon: HiOutlineChartBar },
+      { label: "Relatórios", href: "/relatorios", icon: HiOutlineDocumentChartBar },
     ],
   },
   {

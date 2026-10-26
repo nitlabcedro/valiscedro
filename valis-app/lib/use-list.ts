@@ -37,7 +37,7 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
     setLoading(true);
     const consulta = normalizar ? normalizar(debouncedQ) : debouncedQ;
 
-    const params: Query = { q: consulta, page, pageSize: PAGE_SIZE, ...(JSON.parse(extra) as Query) };
+    const params: Query = { q: consulta || undefined, page, pageSize: PAGE_SIZE, ...(JSON.parse(extra) as Query) };
     apiGet<T[]>(path, params, controller.signal)
       .then((res) => {
         if (!Array.isArray(res.data)) {

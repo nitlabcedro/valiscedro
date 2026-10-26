@@ -118,12 +118,17 @@ export default function ConclusaoPage() {
       ...(validacaoId ? {} : { equipamentoId: form.equipamentoId }),
       analitoId: form.analitoId,
       ...(editId || form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
-      resultados: form.resultados.map((resultado, indice) => ({
-        ordem: (indice + 1) as 1 | 2 | 3,
-        valorReferencia: numeroOuTexto(resultado.valorReferencia),
-        erroPermitido: numeroOuTexto(resultado.erroPermitido),
-        valorObtido: numeroOuTexto(resultado.valorObtido),
-      })),
+      resultados: form.resultados
+        .map((resultado, indice) => ({
+          ordem: (indice + 1) as 1 | 2 | 3,
+          valorReferencia: numeroOuTexto(resultado.valorReferencia),
+          erroPermitido: numeroOuTexto(resultado.erroPermitido),
+          valorObtido: numeroOuTexto(resultado.valorObtido),
+        }))
+        .filter((_, indice) => {
+          const r = form.resultados[indice];
+          return r.valorReferencia.trim() && r.erroPermitido.trim() && r.valorObtido.trim();
+        }),
     };
   }
 
@@ -133,8 +138,9 @@ export default function ConclusaoPage() {
       setErro("Preencha data, equipamento e analito.");
       return;
     }
-    if (form.resultados.some((item) => !item.valorReferencia.trim() || !item.erroPermitido.trim() || !item.valorObtido.trim())) {
-      setErro("Preencha os três resultados.");
+    const r1 = form.resultados[0];
+    if (!r1.valorReferencia.trim() || !r1.erroPermitido.trim() || !r1.valorObtido.trim()) {
+      setErro("Preencha o primeiro resultado (valor de referência, erro permitido e valor obtido).");
       return;
     }
     setSalvando(true);
