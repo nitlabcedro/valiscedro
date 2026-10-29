@@ -9,6 +9,7 @@ import { apiSend, mensagemErro } from "@/lib/api";
 import { cargoLabel, emailValido, iniciais, senhaCabe } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
+import CampoSenha from "@/components/CampoSenha/CampoSenha";
 import type { Usuario } from "@/lib/types";
 
 export default function PerfilPage() {
@@ -131,16 +132,16 @@ export default function PerfilPage() {
         <form onSubmit={salvarSenha}>
           <div className={s.formGroup}>
             <label className={s.formLabel} htmlFor="senhaAtual">Senha atual</label>
-            <input id="senhaAtual" className={s.formInput} type="password" placeholder="••••••••" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoComplete="current-password" />
+            <CampoSenha id="senhaAtual" className={s.formInput} placeholder="••••••••" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoComplete="current-password" />
           </div>
           <div className={s.formGrid} style={{ marginTop: 20 }}>
             <div className={s.formGroup}>
               <label className={s.formLabel} htmlFor="novaSenha">Nova Senha</label>
-              <input id="novaSenha" className={s.formInput} type="password" placeholder="••••••••" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} autoComplete="new-password" />
+              <CampoSenha id="novaSenha" className={s.formInput} placeholder="••••••••" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} autoComplete="new-password" />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel} htmlFor="confirmarNovaSenha">Confirmar Nova Senha</label>
-              <input id="confirmarNovaSenha" className={s.formInput} type="password" placeholder="••••••••" value={confirmarNovaSenha} onChange={(e) => setConfirmarNovaSenha(e.target.value)} autoComplete="new-password" />
+              <CampoSenha id="confirmarNovaSenha" className={s.formInput} placeholder="••••••••" value={confirmarNovaSenha} onChange={(e) => setConfirmarNovaSenha(e.target.value)} autoComplete="new-password" />
             </div>
           </div>
           <Erro texto={erroSenha} />

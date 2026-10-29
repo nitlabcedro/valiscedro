@@ -9,6 +9,7 @@ import styles from "../login.module.css";
 import { apiSend, mensagemErro } from "@/lib/api";
 import { emailValido, senhaCabe } from "@/lib/format";
 import type { Cargo } from "@/lib/types";
+import CampoSenha from "@/components/CampoSenha/CampoSenha";
 
 // Coordenador e Administrador só são atribuídos pela gestão, na tela de Usuários.
 const CARGOS_AUTOCADASTRO: Cargo[] = ["Técnico", "Bioquímico"];
@@ -115,10 +116,9 @@ export default function CadastroPage() {
 
           <div className={sharedStyles.formGroup}>
             <label className={sharedStyles.formLabel} htmlFor="senha">Senha</label>
-            <input
+            <CampoSenha
               id="senha"
               className={sharedStyles.formInput}
-              type="password"
               placeholder="••••••••"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}

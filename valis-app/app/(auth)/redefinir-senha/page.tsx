@@ -8,6 +8,7 @@ import sharedStyles from "@/styles/shared.module.css";
 import styles from "../login.module.css";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { senhaCabe } from "@/lib/format";
+import CampoSenha from "@/components/CampoSenha/CampoSenha";
 
 function Formulario() {
   const params = useSearchParams();
@@ -72,10 +73,9 @@ function Formulario() {
           <form className={styles.form} onSubmit={handleSubmit}>
             <div className={sharedStyles.formGroup}>
               <label className={sharedStyles.formLabel} htmlFor="senha">Nova senha</label>
-              <input
+              <CampoSenha
                 id="senha"
                 className={sharedStyles.formInput}
-                type="password"
                 placeholder="••••••••"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
@@ -84,10 +84,9 @@ function Formulario() {
             </div>
             <div className={sharedStyles.formGroup}>
               <label className={sharedStyles.formLabel} htmlFor="confirmacao">Confirmar nova senha</label>
-              <input
+              <CampoSenha
                 id="confirmacao"
                 className={sharedStyles.formInput}
-                type="password"
                 placeholder="••••••••"
                 value={confirmacao}
                 onChange={(e) => setConfirmacao(e.target.value)}

@@ -10,6 +10,7 @@ import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { rotaInicial } from "@/lib/acesso";
 import type { Usuario } from "@/lib/types";
+import CampoSenha from "@/components/CampoSenha/CampoSenha";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -77,10 +78,9 @@ export default function LoginPage() {
 
           <div className={sharedStyles.formGroup}>
             <label className={sharedStyles.formLabel} htmlFor="senha">Senha</label>
-            <input
+            <CampoSenha
               id="senha"
               className={sharedStyles.formInput}
-              type="password"
               placeholder="••••••••"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
