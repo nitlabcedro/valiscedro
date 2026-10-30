@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   HiOutlinePlus,
@@ -11,7 +11,7 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
-import { apiGet, apiSend, mensagemErro } from "@/lib/api";
+import { ApiError, apiGet, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
 import { useCatalogos } from "@/lib/use-catalogos";
 import { dateInput, formatDate, numeroOuTexto, opcoesAnalito, rotuloStatus, textoValor } from "@/lib/format";
@@ -19,7 +19,7 @@ import { classeSituacao } from "@/lib/badges";
 import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
-import type { ControleValidacao } from "@/lib/types";
+import type { ControleValidacao, ValidacaoDetalhe } from "@/lib/types";
 
 interface ResultadoForm {
   valorReferencia: string;
@@ -83,6 +83,24 @@ export default function ConclusaoPage() {
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [situacaoValidacao, setSituacaoValidacao] = useState<Record<string, string>>({});
+
+  // A listagem de controles não traz a situação da validação vinculada; ela só vem no detalhe da validação.
+  useEffect(() => {
+    const ids = [...new Set(list.items.flatMap((item) => (item.validacaoId ? [item.validacaoId] : [])))];
+    if (ids.length === 0) return;
+    const controller = new AbortController();
+    Promise.all(
+      ids.map((id) =>
+        apiGet<ValidacaoDetalhe>(`/validacoes/${id}`, undefined, controller.signal)
+          .then((res) => [id, res.data.situacao as string] as const)
+          .catch(() => [id, ""] as const),
+      ),
+    ).then((pares) => {
+      if (!controller.signal.aborted) setSituacaoValidacao((atual) => ({ ...atual, ...Object.fromEntries(pares) }));
+    });
+    return () => controller.abort();
+  }, [list.items]);
 
   function atualizarResultado(indice: number, campo: keyof ResultadoForm, valor: string) {
     const resultados = form.resultados.map((item, i) => (i === indice ? { ...item, [campo]: valor } : item)) as FormControle["resultados"];
@@ -155,6 +173,11 @@ export default function ConclusaoPage() {
       list.reload();
     } catch (erroCapturado) {
       setErro(mensagemErro(erroCapturado));
+      // A validação vinculada foi aprovada enquanto a tela estava aberta: a edição não tem mais como ser salva.
+      if (editId && erroCapturado instanceof ApiError && erroCapturado.status === 409) {
+        setAberto(false);
+        list.reload();
+      }
     } finally {
       setSalvando(false);
     }
@@ -218,7 +241,9 @@ export default function ConclusaoPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className={classeSituacao(c.status)}>{c.status}</span>
-                <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(c.id)}><HiOutlinePencilSquare /></button>
+                {!(c.validacaoId && situacaoValidacao[c.validacaoId] === "Aprovado") && (
+                  <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(c.id)}><HiOutlinePencilSquare /></button>
+                )}
                 {c.validacaoId ? (
                   <Link href={`/validacao?id=${encodeURIComponent(c.validacaoId)}`} style={{ fontSize: 12, fontWeight: 600, color: "var(--accent-blue)" }}>
                     Ver validação

@@ -9,7 +9,7 @@ import {
   HiOutlineEye,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
-import { apiGet, apiSend, mensagemErro } from "@/lib/api";
+import { ApiError, apiGet, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
 import { useCatalogos } from "@/lib/use-catalogos";
 import {
@@ -83,17 +83,18 @@ interface OrigemRastreio {
 
 function comAnalito(
   atual: FormValidacao,
-  analito: { id?: string; nome?: string; erroTotalPermitido?: string | number } | null | undefined,
+  analito: { id?: string; nome?: string; erroTotalPermitido?: string | number; referencial?: string | null } | null | undefined,
 ) {
   if (!analito) return atual;
   const analitoId = analito.id || atual.analitoId;
   const reagente = analito.nome || atual.reagente;
+  const referencia = atual.referencia || (analito.referencial ?? "");
   const erroTotal = atual.erroTotal || textoValor(analito.erroTotalPermitido);
   const resultados = atual.resultados.map((resultado) => ({
     ...resultado,
     erroPermitido: resultado.erroPermitido || erroTotal,
   })) as FormValidacao["resultados"];
-  return { ...atual, analitoId, reagente, erroTotal, resultados };
+  return { ...atual, analitoId, reagente, referencia, erroTotal, resultados };
 }
 
 function CampoLeitura({ label, value }: { label: string; value: string }) {
@@ -121,6 +122,9 @@ function ValidacaoConteudo() {
   const [origem, setOrigem] = useState<OrigemRastreio | null>(null);
   const [tentouSalvar, setTentouSalvar] = useState(false);
   const [statusPorId, setStatusPorId] = useState<Record<string, string>>({});
+  // Código da validação reprovada que originou o formulário: bloqueia a identificação do lote.
+  const [reprovada, setReprovada] = useState<string | null>(null);
+  const [decidindo, setDecidindo] = useState(false);
   const faltando = (vazio: boolean) => (tentouSalvar && vazio) || undefined;
   const concordancia = form.tipoCriterio === "Concordância clínica";
 
@@ -202,6 +206,7 @@ function ValidacaoConteudo() {
   function fecharModal() {
     setModal(false);
     setOrigem(null);
+    setReprovada(null);
     setTentouSalvar(false);
     if (rastreabilidadeId) router.replace("/validacao");
   }
@@ -215,27 +220,33 @@ function ValidacaoConteudo() {
       const analito = catalogos.analitos.find((item) => item.id === analitoId);
       const proximo = comAnalito(
         { ...atual, equipamentoId, fabricanteId, analitoId },
-        analito ? { id: analito.id, nome: analito.nome, erroTotalPermitido: analito.erroTotalPermitido } : null,
+        analito ? { id: analito.id, nome: reprovada ? atual.reagente : analito.nome, erroTotalPermitido: analito.erroTotalPermitido, referencial: analito.referencial } : null,
       );
       if (
         proximo.equipamentoId === atual.equipamentoId
         && proximo.fabricanteId === atual.fabricanteId
         && proximo.analitoId === atual.analitoId
         && proximo.reagente === atual.reagente
+        && proximo.referencia === atual.referencia
         && proximo.erroTotal === atual.erroTotal
         && proximo.resultados.every((item, indice) => item.erroPermitido === atual.resultados[indice].erroPermitido)
       ) return atual;
       return proximo;
     });
-  }, [catalogos.analitos, catalogos.equipamentos, catalogos.fabricantes, modal, nomes]);
+  }, [catalogos.analitos, catalogos.equipamentos, catalogos.fabricantes, modal, nomes, reprovada]);
 
   function escolherAnalito(analitoId: string) {
+    if (reprovada) {
+      setForm({ ...form, analitoId });
+      return;
+    }
     const analito = catalogos.analitos.find((item) => item.id === analitoId);
     const erro = textoValor(analito?.erroTotalPermitido);
     setForm({
       ...form,
       analitoId,
       reagente: analito?.nome ?? "",
+      referencia: analito?.referencial ?? "",
       erroTotal: erro,
       resultados: form.resultados.map((resultado) => ({ ...resultado, erroPermitido: erro })) as FormValidacao["resultados"],
     });
@@ -254,6 +265,66 @@ function ValidacaoConteudo() {
     } catch (erroCapturado) {
       setErro(mensagemErro(erroCapturado));
     }
+  }
+
+  async function recarregarDetalhe(id: string) {
+    try {
+      const res = await apiGet<ValidacaoDetalhe>(`/validacoes/${id}`);
+      setDetalhe(res.data);
+    } catch {
+      /* mantém o registro aberto; a API continua recusando alterações indevidas */
+    }
+  }
+
+  function fecharDetalhe() {
+    setDetalhe(null);
+    setErro("");
+  }
+
+  async function decidir(situacao: "Aprovado" | "Rejeitado") {
+    if (!detalhe) return;
+    const aviso = situacao === "Aprovado"
+      ? "Depois de aprovada, esta validação não poderá ser alterada nem excluída."
+      : "Depois de reprovada, esta decisão não poderá ser desfeita. Para repetir a validação deste lote, use \"Nova validação\".";
+    if (!window.confirm(aviso)) return;
+    setDecidindo(true);
+    setErro("");
+    try {
+      await apiSend("PATCH", `/validacoes/${detalhe.id}`, { lote: { situacao } });
+      await recarregarDetalhe(detalhe.id);
+      list.reload();
+    } catch (erroCapturado) {
+      setErro(mensagemErro(erroCapturado));
+      // Outra pessoa pode ter decidido enquanto a tela estava aberta.
+      if (erroCapturado instanceof ApiError && erroCapturado.status === 409) {
+        await recarregarDetalhe(detalhe.id);
+        list.reload();
+      }
+    } finally {
+      setDecidindo(false);
+    }
+  }
+
+  function novaDaReprovada(base: ValidacaoDetalhe) {
+    const lote = base.lotes?.[base.lotes.length - 1];
+    setErro("");
+    setTentouSalvar(false);
+    setOrigem(null);
+    setNomes({ equipamento: base.equipamento, fabricante: base.fabricante });
+    setReprovada(base.codigo);
+    setForm(comAnalito({
+      ...formVazio(),
+      equipamentoId: base.equipamentoId ?? "",
+      fabricanteId: base.fabricanteId ?? "",
+      reagente: base.reagente,
+      tipoCriterio: base.tipoCriterio as TipoCriterio,
+      referencia: base.referencia ?? "",
+      erroTotal: textoValor(base.erroTotal),
+      numero: lote?.numero ?? "",
+      validade: dateInput(lote?.validade),
+    }, { id: base.controle?.analitoId }));
+    setDetalhe(null);
+    setModal(true);
   }
 
   function resultadosPayload() {
@@ -316,6 +387,7 @@ function ValidacaoConteudo() {
       list.reload();
     } catch (erroCapturado) {
       setErro(mensagemErro(erroCapturado));
+      if (erroCapturado instanceof ApiError && erroCapturado.status === 409) list.reload();
     } finally {
       setSalvando(false);
     }
@@ -329,6 +401,7 @@ function ValidacaoConteudo() {
       list.reload();
     } catch (erroCapturado) {
       setErro(mensagemErro(erroCapturado));
+      if (erroCapturado instanceof ApiError && erroCapturado.status === 409) list.reload();
     }
   }
 
@@ -340,13 +413,13 @@ function ValidacaoConteudo() {
           <p>Registre e acompanhe as validações de reagentes e analitos</p>
         </div>
         <div className={s.headerActions}>
-          <button type="button" className={s.btnPrimary} onClick={() => { setErro(""); setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setModal(true); if (rastreabilidadeId) router.replace("/validacao"); }}>
+          <button type="button" className={s.btnPrimary} onClick={() => { setErro(""); setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setReprovada(null); setModal(true); if (rastreabilidadeId) router.replace("/validacao"); }}>
             <HiOutlinePlus /> Nova Validação
           </button>
         </div>
       </div>
 
-      <Erro texto={modal ? "" : erro || list.erro || catalogos.erro} />
+      <Erro texto={modal || detalhe ? "" : erro || list.erro || catalogos.erro} />
 
       <div className={s.card}>
         <div className={s.searchBar}>
@@ -394,7 +467,7 @@ function ValidacaoConteudo() {
                     <MenuAcoes
                       acoes={[
                         { rotulo: "Ver detalhes", icone: <HiOutlineEye />, onClick: () => verDetalhe(v.id) },
-                        { rotulo: "Excluir", icone: <HiOutlineTrash />, onClick: () => excluir(v.id), perigo: true },
+                        ...(v.situacao === "Aprovado" ? [] : [{ rotulo: "Excluir", icone: <HiOutlineTrash />, onClick: () => excluir(v.id), perigo: true }]),
                       ]}
                     />
                   </td>
@@ -412,6 +485,11 @@ function ValidacaoConteudo() {
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
             <h2 className={s.modalTitle}>Nova Validação</h2>
             <form onSubmit={salvar}>
+              {reprovada && (
+                <p style={{ fontSize: 13, margin: "0 0 16px", color: "var(--text-secondary)" }}>
+                  Nova corrida do lote reprovado em {reprovada}. Equipamento, analito, fabricante e número do lote ficam bloqueados para manter o vínculo com a reprovação.
+                </p>
+              )}
               {origem && (
                 <>
                   <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 16px", color: "var(--text-secondary)" }}>Rastreabilidade {origem.codigo}</h3>
@@ -426,15 +504,16 @@ function ValidacaoConteudo() {
                 </>
               )}
               <div className={s.formGrid}>
-                <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} invalid={faltando(!form.equipamentoId)} />
+                <CatalogSelect label="Equipamento" value={form.equipamentoId} onChange={(equipamentoId) => setForm({ ...form, equipamentoId })} items={catalogos.equipamentos} invalid={faltando(!form.equipamentoId)} disabled={Boolean(reprovada)} />
                 <CatalogSelect
                   label="Analito"
                   value={form.analitoId}
                   onChange={escolherAnalito}
                   items={opcoesAnalito(catalogos.analitos, form.analitoId ? { id: form.analitoId, nome: form.reagente, erroTotalPermitido: form.erroTotal } : null)}
                   invalid={faltando(!form.reagente.trim() || !form.analitoId)}
+                  disabled={Boolean(reprovada && form.analitoId)}
                 />
-                <CatalogSelect label="Fabricante" value={form.fabricanteId} onChange={(fabricanteId) => setForm({ ...form, fabricanteId })} items={catalogos.fabricantes} invalid={faltando(!form.fabricanteId)} />
+                <CatalogSelect label="Fabricante" value={form.fabricanteId} onChange={(fabricanteId) => setForm({ ...form, fabricanteId })} items={catalogos.fabricantes} invalid={faltando(!form.fabricanteId)} disabled={Boolean(reprovada)} />
                 <div className={s.formGroup}>
                   <label className={s.formLabel}>Tipo de Critério</label>
                   <select className={s.formSelect} value={form.tipoCriterio} aria-invalid={faltando(!form.tipoCriterio)} onChange={(e) => setForm({ ...form, tipoCriterio: e.target.value as TipoCriterio })}>
@@ -454,7 +533,7 @@ function ValidacaoConteudo() {
 
               <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Lote</h3>
               <div className={s.formGrid}>
-                <div className={s.formGroup}><label className={s.formLabel}>Número do Lote</label><input className={s.formInput} placeholder="Ex: VL-2024-XX" value={form.numero} aria-invalid={faltando(!form.numero.trim())} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
+                <div className={s.formGroup}><label className={s.formLabel}>Número do Lote</label><input className={s.formInput} placeholder="Ex: VL-2024-XX" value={form.numero} readOnly={Boolean(reprovada)} aria-invalid={faltando(!form.numero.trim())} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
                 <div className={s.formGroup}><label className={s.formLabel}>Data de Validade</label><input className={s.formInput} type="date" value={form.validade} aria-invalid={faltando(!form.validade)} onChange={(e) => setForm({ ...form, validade: e.target.value })} /></div>
               </div>
 
@@ -513,7 +592,7 @@ function ValidacaoConteudo() {
       )}
 
       {detalhe && (
-        <div className={s.modalOverlay} onClick={() => setDetalhe(null)}>
+        <div className={s.modalOverlay} onClick={fecharDetalhe}>
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
             <h2 className={s.modalTitle}>Detalhes — {detalhe.codigo}</h2>
             <div className={s.formGrid}>
@@ -576,8 +655,20 @@ function ValidacaoConteudo() {
               </>
             )}
 
+            <Erro texto={erro} />
             <div className={s.formActions}>
-              <button type="button" className={s.btnSecondary} onClick={() => setDetalhe(null)}>Fechar</button>
+              <button type="button" className={s.btnSecondary} onClick={fecharDetalhe}>Fechar</button>
+              {detalhe.situacao === "Em andamento" && (
+                <>
+                  <button type="button" className={s.btnDanger} disabled={decidindo} onClick={() => decidir("Rejeitado")}>Reprovar</button>
+                  <button type="button" className={s.btnPrimary} disabled={decidindo} onClick={() => decidir("Aprovado")}>Aprovar</button>
+                </>
+              )}
+              {detalhe.situacao === "Rejeitado" && (
+                <button type="button" className={s.btnPrimary} onClick={() => novaDaReprovada(detalhe)}>
+                  <HiOutlinePlus /> Nova validação
+                </button>
+              )}
             </div>
           </div>
         </div>
