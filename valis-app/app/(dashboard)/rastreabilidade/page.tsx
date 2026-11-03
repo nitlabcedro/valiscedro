@@ -160,6 +160,8 @@ function GrupoAnalito({
   );
 }
 
+const MAX_ABERTURAS = 3;
+
 const formVazio = {
   ntoId: "",
   setorId: "",
@@ -339,6 +341,10 @@ export default function RastreabilidadePage() {
     setErro("");
     try {
       const registro = await carregarDetalhe(id);
+      if (registro.lotes.length >= MAX_ABERTURAS) {
+        setErro(`Este registro já atingiu o limite de ${MAX_ABERTURAS} aberturas.`);
+        return;
+      }
       const lote = registro.lotes.at(-1);
       const numero = registro.numero || lote?.numero || "";
       const validade = registro.validade || lote?.validade || "";
