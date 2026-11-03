@@ -8,7 +8,7 @@ import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
 import { rotaInicial } from "@/lib/acesso";
 import { apiSend, mensagemErro } from "@/lib/api";
 import { cargoLabel, cargosAtribuiveis, emailValido } from "@/lib/format";
-import Erro from "@/components/Erro";
+import { notificar } from "@/lib/notificar";
 import type { Cargo } from "@/lib/types";
 
 export default function NovoUsuarioPage() {
@@ -17,7 +17,6 @@ export default function NovoUsuarioPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [cargo, setCargo] = useState("");
-  const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
@@ -27,14 +26,13 @@ export default function NovoUsuarioPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!nome.trim() || !email.trim() || !cargo) {
-      setErro("Preencha nome, e-mail e cargo.");
+      notificar.erro("Preencha nome, e-mail e cargo.");
       return;
     }
     if (!emailValido(email)) {
-      setErro("Informe um e-mail válido.");
+      notificar.erro("Informe um e-mail válido.");
       return;
     }
-    setErro("");
     setEnviando(true);
     try {
       await apiSend("POST", "/usuarios", {
@@ -42,9 +40,10 @@ export default function NovoUsuarioPage() {
         email: email.trim(),
         cargo: cargo as Cargo,
       });
+      notificar.sucesso("Usuário cadastrado.");
       router.push("/usuarios");
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
       setEnviando(false);
     }
   }
@@ -101,8 +100,6 @@ export default function NovoUsuarioPage() {
               </select>
             </div>
           </div>
-
-          <Erro texto={erro} />
 
           <div className={s.formActions}>
             <button type="button" className={s.btnSecondary} onClick={() => router.push("/usuarios")}>

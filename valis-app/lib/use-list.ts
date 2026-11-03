@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PAGE_SIZE, apiGet, mensagemErro, type Query } from "@/lib/api";
+import { notificar } from "@/lib/notificar";
 
 export function useList<T>(path: string | null, normalizar?: (q: string) => string, query?: Query) {
   const extra = JSON.stringify(query ?? {});
@@ -11,7 +12,6 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
   const [items, setItems] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(Boolean(path));
-  const [erro, setErro] = useState("");
   const [versao, setVersao] = useState(0);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
         if (!Array.isArray(res.data)) {
           setItems([]);
           setTotal(0);
-          setErro("Resposta inesperada da API.");
+          notificar.erro("Resposta inesperada da API.");
           return;
         }
         const totalAtual = res.total ?? res.data.length;
@@ -54,13 +54,12 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
         }
         setItems(res.data);
         setTotal(totalAtual);
-        setErro("");
       })
       .catch((erroCapturado: unknown) => {
         if (controller.signal.aborted) return;
         const mensagem = mensagemErro(erroCapturado);
         if (!mensagem) return;
-        setErro(mensagem);
+        notificar.erro(mensagem);
         setItems([]);
         setTotal(0);
       })
@@ -71,5 +70,5 @@ export function useList<T>(path: string | null, normalizar?: (q: string) => stri
     return () => controller.abort();
   }, [path, debouncedQ, page, versao, normalizar, extra]);
 
-  return { q, setQ, page, setPage, items, total, loading, erro, setErro, reload, pageSize: PAGE_SIZE };
+  return { q, setQ, page, setPage, items, total, loading, reload, pageSize: PAGE_SIZE };
 }

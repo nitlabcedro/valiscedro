@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider/AuthProvider";
+import Notificacoes from "@/components/Notificacoes";
 import "./globals.css";
 
 
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={inter.className}>
         <AuthProvider>{children}</AuthProvider>
+        <Notificacoes />
       </body>
     </html>
   );

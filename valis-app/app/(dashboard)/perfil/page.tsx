@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { HiOutlineCheckCircle } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import p from "./perfil.module.css";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { apiSend, mensagemErro } from "@/lib/api";
 import { cargoLabel, emailValido, iniciais, senhaCabe } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
-import Erro from "@/components/Erro";
+import { notificar } from "@/lib/notificar";
 import CampoSenha from "@/components/CampoSenha/CampoSenha";
 import type { Usuario } from "@/lib/types";
 
@@ -16,13 +15,10 @@ export default function PerfilPage() {
   const { usuario, updateUsuario, sairLocal } = useAuth();
   const [nome, setNome] = useState(usuario?.nome ?? "");
   const [email, setEmail] = useState(usuario?.email ?? "");
-  const [salvo, setSalvo] = useState(false);
-  const [erroPerfil, setErroPerfil] = useState("");
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarNovaSenha, setConfirmarNovaSenha] = useState("");
-  const [erroSenha, setErroSenha] = useState("");
   const [salvandoSenha, setSalvandoSenha] = useState(false);
 
   useEffect(() => {
@@ -34,14 +30,13 @@ export default function PerfilPage() {
   async function salvarPerfil(e: FormEvent) {
     e.preventDefault();
     if (!nome.trim() || !email.trim()) {
-      setErroPerfil("Preencha nome e e-mail.");
+      notificar.erro("Preencha nome e e-mail.");
       return;
     }
     if (!emailValido(email)) {
-      setErroPerfil("Informe um e-mail válido.");
+      notificar.erro("Informe um e-mail válido.");
       return;
     }
-    setErroPerfil("");
     setSalvandoPerfil(true);
     try {
       const atualizado = await apiSend<Usuario>("PATCH", "/perfil", {
@@ -49,10 +44,9 @@ export default function PerfilPage() {
         email: email.trim(),
       });
       updateUsuario(atualizado);
-      setSalvo(true);
-      setTimeout(() => setSalvo(false), 3000);
+      notificar.sucesso("Perfil atualizado.");
     } catch (erroCapturado) {
-      setErroPerfil(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setSalvandoPerfil(false);
     }
@@ -61,28 +55,28 @@ export default function PerfilPage() {
   async function salvarSenha(e: FormEvent) {
     e.preventDefault();
     if (!senhaAtual || !novaSenha || !confirmarNovaSenha) {
-      setErroSenha("Preencha a senha atual, a nova senha e a confirmação.");
+      notificar.erro("Preencha a senha atual, a nova senha e a confirmação.");
       return;
     }
     if (novaSenha.length < 6) {
-      setErroSenha("A nova senha precisa ter pelo menos 6 caracteres.");
+      notificar.erro("A nova senha precisa ter pelo menos 6 caracteres.");
       return;
     }
     if (!senhaCabe(novaSenha)) {
-      setErroSenha("Senha excede o tamanho máximo.");
+      notificar.erro("Senha excede o tamanho máximo.");
       return;
     }
     if (novaSenha !== confirmarNovaSenha) {
-      setErroSenha("A confirmação da senha não confere.");
+      notificar.erro("A confirmação da senha não confere.");
       return;
     }
-    setErroSenha("");
     setSalvandoSenha(true);
     try {
       await apiSend("PATCH", "/perfil/senha", { senhaAtual, novaSenha, confirmarNovaSenha });
+      notificar.sucesso("Senha alterada. Entre novamente com a nova senha.");
       sairLocal();
     } catch (erroCapturado) {
-      setErroSenha(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
       setSalvandoSenha(false);
     }
   }
@@ -118,10 +112,9 @@ export default function PerfilPage() {
               <input id="email" className={s.formInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
             </div>
           </div>
-          <Erro texto={erroPerfil} />
           <div className={s.formActions}>
             <button type="submit" className={s.btnPrimary} disabled={salvandoPerfil}>
-              {salvo ? <><HiOutlineCheckCircle /> Salvo!</> : salvandoPerfil ? "Salvando..." : "Salvar Alterações"}
+              {salvandoPerfil ? "Salvando..." : "Salvar Alterações"}
             </button>
           </div>
         </form>
@@ -144,7 +137,6 @@ export default function PerfilPage() {
               <CampoSenha id="confirmarNovaSenha" className={s.formInput} placeholder="••••••••" value={confirmarNovaSenha} onChange={(e) => setConfirmarNovaSenha(e.target.value)} autoComplete="new-password" />
             </div>
           </div>
-          <Erro texto={erroSenha} />
           <div className={s.formActions}>
             <button
               type="button"
@@ -153,7 +145,6 @@ export default function PerfilPage() {
                 setSenhaAtual("");
                 setNovaSenha("");
                 setConfirmarNovaSenha("");
-                setErroSenha("");
               }}
             >
               Cancelar

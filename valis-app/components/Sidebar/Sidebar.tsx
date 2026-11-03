@@ -21,6 +21,7 @@ import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { cargoDe, podeAcessar } from "@/lib/acesso";
 import { cargoLabel, iniciais } from "@/lib/format";
+import { notificar } from "@/lib/notificar";
 
 const navItems: { section: string; items: { label: string; href: string; icon: typeof HiOutlineHome }[] }[] = [
   {
@@ -57,6 +58,7 @@ export default function Sidebar() {
   async function handleSair() {
     setSaindo(true);
     await logout();
+    notificar.info("Sessão encerrada.");
   }
 
   return (

@@ -9,6 +9,7 @@ import {
   HiOutlineXCircle,
   HiOutlinePencilSquare,
   HiOutlineTrash,
+  HiOutlineExclamationTriangle,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { ApiError, apiGet, apiSend, mensagemErro } from "@/lib/api";
@@ -16,7 +17,7 @@ import { useList } from "@/lib/use-list";
 import { useCatalogos } from "@/lib/use-catalogos";
 import { dateInput, formatDate, numeroOuTexto, opcoesAnalito, rotuloStatus, textoValor } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
-import Erro from "@/components/Erro";
+import { confirmar, notificar } from "@/lib/notificar";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
 import type { ControleValidacao, ValidacaoDetalhe } from "@/lib/types";
@@ -81,7 +82,6 @@ export default function ConclusaoPage() {
   const [validacaoId, setValidacaoId] = useState<string | null>(null);
   const [codigo, setCodigo] = useState("");
   const [aberto, setAberto] = useState(false);
-  const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [situacaoValidacao, setSituacaoValidacao] = useState<Record<string, string>>({});
 
@@ -108,7 +108,6 @@ export default function ConclusaoPage() {
   }
 
   function abrirNovo() {
-    setErro("");
     setEditId(null);
     setValidacaoId(null);
     setCodigo("");
@@ -117,7 +116,6 @@ export default function ConclusaoPage() {
   }
 
   async function abrirEdicao(id: string) {
-    setErro("");
     try {
       const res = await apiGet<ControleValidacao>(`/controles-validacao/${id}`);
       setEditId(res.data.id);
@@ -126,7 +124,7 @@ export default function ConclusaoPage() {
       setForm(doRegistro(res.data));
       setAberto(true);
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
@@ -153,26 +151,26 @@ export default function ConclusaoPage() {
   async function salvar(e: FormEvent) {
     e.preventDefault();
     if (!form.data || !form.equipamentoId || !form.analitoId) {
-      setErro("Preencha data, equipamento e analito.");
+      notificar.erro("Preencha data, equipamento e analito.");
       return;
     }
     const r1 = form.resultados[0];
     if (!r1.valorReferencia.trim() || !r1.erroPermitido.trim() || !r1.valorObtido.trim()) {
-      setErro("Preencha o primeiro resultado (valor de referência, erro permitido e valor obtido).");
+      notificar.erro("Preencha o primeiro resultado (valor de referência, erro permitido e valor obtido).");
       return;
     }
     setSalvando(true);
-    setErro("");
     try {
       if (editId) {
         await apiSend("PATCH", `/controles-validacao/${editId}`, payload());
       } else {
         await apiSend("POST", "/controles-validacao", payload());
       }
+      notificar.sucesso(editId ? "Controle de validação atualizado." : "Controle de validação cadastrado.");
       setAberto(false);
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
       // A validação vinculada foi aprovada enquanto a tela estava aberta: a edição não tem mais como ser salva.
       if (editId && erroCapturado instanceof ApiError && erroCapturado.status === 409) {
         setAberto(false);
@@ -184,13 +182,13 @@ export default function ConclusaoPage() {
   }
 
   async function excluir(id: string) {
-    if (!window.confirm("Excluir este controle de validação?")) return;
-    setErro("");
+    if (!(await confirmar("Excluir este controle de validação?"))) return;
     try {
       await apiSend("DELETE", `/controles-validacao/${id}`);
+      notificar.sucesso("Controle de validação excluído.");
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
@@ -207,8 +205,6 @@ export default function ConclusaoPage() {
           </button>
         </div>
       </div>
-
-      <Erro texto={aberto ? "" : erro || list.erro || catalogos.erro} />
 
       <div className={s.card}>
         <div className={s.searchBar}>
@@ -286,8 +282,8 @@ export default function ConclusaoPage() {
               </table>
             </div>
             {c.observacoes && (
-              <div style={{ marginTop: 12, fontSize: 12, color: "var(--accent-yellow)", fontWeight: 500 }}>
-                ⚠ {c.observacoes}
+              <div style={{ marginTop: 12, fontSize: 12, color: "var(--accent-yellow)", fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
+                <HiOutlineExclamationTriangle size={14} /> {c.observacoes}
               </div>
             )}
           </div>
@@ -347,7 +343,6 @@ export default function ConclusaoPage() {
                 <textarea className={s.formTextarea} placeholder="Observações..." value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
               </div>
 
-              <Erro texto={erro} />
               <div className={s.formActions}>
                 <button type="button" className={s.btnSecondary} onClick={() => setAberto(false)}>Cancelar</button>
                 <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Salvar Controle"}</button>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "./login.module.css";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
+import { notificar } from "@/lib/notificar";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
 import { rotaInicial } from "@/lib/acesso";
 import type { Usuario } from "@/lib/types";
@@ -17,7 +18,6 @@ export default function LoginPage() {
   const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   // O bloqueio da API é por e-mail + IP, então trocar o e-mail libera o botão.
   const [bloqueado, setBloqueado] = useState(false);
@@ -25,10 +25,9 @@ export default function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!email.trim() || !senha) {
-      setErro("Preencha e-mail e senha.");
+      notificar.erro("Preencha e-mail e senha.");
       return;
     }
-    setErro("");
     setEnviando(true);
     try {
       const data = await apiSend<{ token: string; usuario: Usuario }>("POST", "/auth/login", {
@@ -36,10 +35,11 @@ export default function LoginPage() {
         senha,
       });
       setSession(data.token, data.usuario);
+      notificar.sucesso(`Olá, ${data.usuario.nome.split(" ")[0]}. Login realizado.`);
       router.push(rotaInicial(data.usuario.cargo));
     } catch (erroCapturado) {
       if (erroCapturado instanceof ApiError && erroCapturado.status === 429) setBloqueado(true);
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setEnviando(false);
     }
@@ -90,8 +90,6 @@ export default function LoginPage() {
               Esqueceu a senha?
             </Link>
           </div>
-
-          {erro && <p className={styles.formError}>{erro}</p>}
 
           <button type="submit" className={styles.loginBtn} disabled={enviando || bloqueado}>
             {enviando ? "Entrando..." : "Acessar"}

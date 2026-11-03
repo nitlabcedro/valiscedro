@@ -18,7 +18,7 @@ import { useList } from "@/lib/use-list";
 import { useCatalogos } from "@/lib/use-catalogos";
 import { cargoLabel, exibirErroTotal, formatDate, situacaoLote } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
-import Erro from "@/components/Erro";
+import { confirmar, notificar } from "@/lib/notificar";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
 import MenuAcoes, { type AcaoMenu } from "@/components/MenuAcoes";
@@ -186,7 +186,6 @@ export default function RastreabilidadePage() {
     analitoId: filtroAnalito || undefined,
   });
   const catalogos = useCatalogos(["equipamentos", "fabricantes", "ntos", "setores", "analitos"]);
-  const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [criando, setCriando] = useState(false);
   const [form, setForm] = useState(formVazio);
@@ -210,10 +209,6 @@ export default function RastreabilidadePage() {
     responsavel: string;
   }>(null);
 
-  function mensagem() {
-    return erro || list.erro || catalogos.erro;
-  }
-
   async function carregarDetalhe(id: string) {
     const res = await apiGet<RastreabilidadeDetalhe>(`/rastreabilidades/${id}`);
     return res.data;
@@ -224,16 +219,14 @@ export default function RastreabilidadePage() {
   }
 
   async function verDetalhe(id: string) {
-    setErro("");
     try {
       setDetalhe(await carregarDetalhe(id));
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
   async function abrirEdicao(id: string) {
-    setErro("");
     try {
       const registro = await carregarDetalhe(id);
       setForm({
@@ -248,17 +241,16 @@ export default function RastreabilidadePage() {
       });
       setEditando({ id: registro.id, codigo: registro.codigo });
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
   async function abrirFinalizar(item: Pick<RastreabilidadeNoGrupo, "id">) {
-    setErro("");
     try {
       const registro = await carregarDetalhe(item.id);
       const abertos = registro.lotes.filter((lote) => !lote.fechamento);
       if (abertos.length === 0) {
-        setErro("Não há abertura em aberto para finalizar.");
+        notificar.aviso("Não há abertura em aberto para finalizar.");
         return;
       }
       setFinalizar({
@@ -270,22 +262,21 @@ export default function RastreabilidadePage() {
         responsavel: usuario?.nome ?? "",
       });
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
   async function salvarNovo(e: FormEvent) {
     e.preventDefault();
     if (!form.ntoId || !form.setorId || !form.equipamentoId || !form.tipoMaterial || !form.fabricanteId || !form.analitoId) {
-      setErro("Preencha NTO, setor, equipamento, material, fabricante e analito.");
+      notificar.erro("Preencha NTO, setor, equipamento, material, fabricante e analito.");
       return;
     }
     if (!form.numero.trim() || !form.validade || !form.abertura || !form.responsavelAbertura.trim()) {
-      setErro("Preencha número, validade, abertura e responsável do lote.");
+      notificar.erro("Preencha número, validade, abertura e responsável do lote.");
       return;
     }
     setSalvando(true);
-    setErro("");
     try {
       await apiSend("POST", "/rastreabilidades", {
         ntoId: form.ntoId,
@@ -301,11 +292,12 @@ export default function RastreabilidadePage() {
           responsavelAbertura: form.responsavelAbertura.trim(),
         },
       });
+      notificar.sucesso("Registro de rastreabilidade cadastrado.");
       setCriando(false);
       setForm(formVazio);
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setSalvando(false);
     }
@@ -315,11 +307,10 @@ export default function RastreabilidadePage() {
     e.preventDefault();
     if (!editando) return;
     if (!form.ntoId || !form.setorId || !form.tipoMaterial || !form.fabricanteId || !form.analitoId) {
-      setErro("Preencha NTO, setor, material, fabricante e analito.");
+      notificar.erro("Preencha NTO, setor, material, fabricante e analito.");
       return;
     }
     setSalvando(true);
-    setErro("");
     try {
       await apiSend("PATCH", `/rastreabilidades/${editando.id}`, {
         ntoId: form.ntoId,
@@ -328,28 +319,28 @@ export default function RastreabilidadePage() {
         fabricanteId: form.fabricanteId,
         analitoId: form.analitoId,
       });
+      notificar.sucesso("Registro de rastreabilidade atualizado.");
       setEditando(null);
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setSalvando(false);
     }
   }
 
   async function abrirAbertura(id: string) {
-    setErro("");
     try {
       const registro = await carregarDetalhe(id);
       if (registro.lotes.length >= MAX_ABERTURAS) {
-        setErro(`Este registro já atingiu o limite de ${MAX_ABERTURAS} aberturas.`);
+        notificar.aviso(`Este registro já atingiu o limite de ${MAX_ABERTURAS} aberturas.`);
         return;
       }
       const lote = registro.lotes.at(-1);
       const numero = registro.numero || lote?.numero || "";
       const validade = registro.validade || lote?.validade || "";
       if (!numero || !validade) {
-        setErro("Este registro não tem lote e validade para uma nova abertura.");
+        notificar.aviso("Este registro não tem lote e validade para uma nova abertura.");
         return;
       }
       setAbertura({
@@ -362,7 +353,7 @@ export default function RastreabilidadePage() {
         responsavel: usuario?.nome ?? "",
       });
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
@@ -370,21 +361,21 @@ export default function RastreabilidadePage() {
     e.preventDefault();
     if (!abertura) return;
     if (!abertura.equipamentoId || !abertura.data || !abertura.responsavel.trim()) {
-      setErro("Escolha o equipamento, a data de abertura e o responsável.");
+      notificar.erro("Escolha o equipamento, a data de abertura e o responsável.");
       return;
     }
     setSalvando(true);
-    setErro("");
     try {
       await apiSend("POST", `/rastreabilidades/${abertura.id}/lotes`, {
         equipamentoId: abertura.equipamentoId,
         abertura: abertura.data,
         responsavelAbertura: abertura.responsavel.trim(),
       });
+      notificar.sucesso("Nova abertura registrada.");
       setAbertura(null);
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setSalvando(false);
     }
@@ -394,42 +385,40 @@ export default function RastreabilidadePage() {
     e.preventDefault();
     if (!finalizar) return;
     if (!finalizar.fechamento || !finalizar.responsavel.trim()) {
-      setErro("Preencha a data de fechamento e o responsável.");
+      notificar.erro("Preencha a data de fechamento e o responsável.");
       return;
     }
     const aberturaLote = finalizar.lotes.find((lote) => lote.id === finalizar.loteId)?.abertura;
     if (aberturaLote && finalizar.fechamento < aberturaLote) {
-      setErro("A data de fechamento não pode ser anterior à abertura.");
+      notificar.erro("A data de fechamento não pode ser anterior à abertura.");
       return;
     }
     setSalvando(true);
-    setErro("");
     try {
       await apiSend("POST", `/rastreabilidades/${finalizar.id}/lotes/${finalizar.loteId}/finalizar`, {
         fechamento: finalizar.fechamento,
         responsavelFechamento: finalizar.responsavel.trim(),
       });
+      notificar.sucesso("Abertura finalizada.");
       setFinalizar(null);
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setSalvando(false);
     }
   }
 
   async function excluir(id: string) {
-    if (!window.confirm("Excluir este registro de rastreabilidade?")) return;
-    setErro("");
+    if (!(await confirmar("Excluir este registro de rastreabilidade?"))) return;
     try {
       await apiSend("DELETE", `/rastreabilidades/${id}`);
+      notificar.sucesso("Registro de rastreabilidade excluído.");
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
-
-  const modalAberto = criando || editando || abertura || finalizar;
 
   return (
     <div className={s.page}>
@@ -440,7 +429,6 @@ export default function RastreabilidadePage() {
         </div>
         <div className={s.headerActions}>
           <button type="button" className={s.btnPrimary} onClick={() => {
-            setErro("");
             setForm({ ...formVazio, responsavelAbertura: usuario?.nome ?? "" });
             setCriando(true);
           }}>
@@ -448,8 +436,6 @@ export default function RastreabilidadePage() {
           </button>
         </div>
       </div>
-
-      <Erro texto={modalAberto ? "" : mensagem()} />
 
       <div className={s.card}>
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
@@ -619,7 +605,6 @@ export default function RastreabilidadePage() {
                 </>
               )}
 
-              <Erro texto={erro} />
               <div className={s.formActions}>
                 <button type="button" className={s.btnSecondary} onClick={() => { setCriando(false); setEditando(null); }}>Cancelar</button>
                 <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Salvar Registro"}</button>
@@ -661,7 +646,6 @@ export default function RastreabilidadePage() {
                   <input className={s.formInput} value={abertura.responsavel} onChange={(e) => setAbertura({ ...abertura, responsavel: e.target.value })} />
                 </div>
               </div>
-              <Erro texto={erro} />
               <div className={s.formActions}>
                 <button type="button" className={s.btnSecondary} onClick={() => setAbertura(null)}>Cancelar</button>
                 <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Registrar abertura"}</button>
@@ -699,7 +683,6 @@ export default function RastreabilidadePage() {
                   <input className={s.formInput} value={finalizar.responsavel} onChange={(e) => setFinalizar({ ...finalizar, responsavel: e.target.value })} />
                 </div>
               </div>
-              <Erro texto={erro} />
               <div className={s.formActions}>
                 <button type="button" className={s.btnSecondary} onClick={() => setFinalizar(null)}>Cancelar</button>
                 <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Finalizar"}</button>

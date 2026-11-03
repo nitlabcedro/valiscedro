@@ -23,7 +23,7 @@ import {
   textoValor,
 } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
-import Erro from "@/components/Erro";
+import { confirmar, notificar } from "@/lib/notificar";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
 import MenuAcoes from "@/components/MenuAcoes";
@@ -113,7 +113,6 @@ function ValidacaoConteudo() {
   const validacaoAberta = searchParams.get("id");
   const list = useList<ValidacaoLista>("/validacoes");
   const catalogos = useCatalogos(["equipamentos", "fabricantes", "analitos"]);
-  const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [form, setForm] = useState<FormValidacao>(formVazio);
   const [modal, setModal] = useState(false);
@@ -131,7 +130,6 @@ function ValidacaoConteudo() {
   useEffect(() => {
     if (!rastreabilidadeId) return;
     let cancelado = false;
-    setErro("");
     apiGet<RastreabilidadeDetalhe>(`/rastreabilidades/${rastreabilidadeId}`)
       .then((res) => {
         if (cancelado) return;
@@ -163,7 +161,7 @@ function ValidacaoConteudo() {
       })
       .catch((erroCapturado) => {
         if (cancelado) return;
-        setErro(mensagemErro(erroCapturado));
+        notificar.erro(mensagemErro(erroCapturado));
       });
     return () => {
       cancelado = true;
@@ -196,7 +194,7 @@ function ValidacaoConteudo() {
         if (!cancelado) setDetalhe(res.data);
       })
       .catch((erroCapturado) => {
-        if (!cancelado) setErro(mensagemErro(erroCapturado));
+        if (!cancelado) notificar.erro(mensagemErro(erroCapturado));
       });
     return () => {
       cancelado = true;
@@ -258,12 +256,11 @@ function ValidacaoConteudo() {
   }
 
   async function verDetalhe(id: string) {
-    setErro("");
     try {
       const res = await apiGet<ValidacaoDetalhe>(`/validacoes/${id}`);
       setDetalhe(res.data);
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
@@ -278,7 +275,6 @@ function ValidacaoConteudo() {
 
   function fecharDetalhe() {
     setDetalhe(null);
-    setErro("");
   }
 
   async function decidir(situacao: "Aprovado" | "Rejeitado") {
@@ -286,15 +282,15 @@ function ValidacaoConteudo() {
     const aviso = situacao === "Aprovado"
       ? "Depois de aprovada, esta validação não poderá ser alterada nem excluída."
       : "Depois de reprovada, esta decisão não poderá ser desfeita. Para repetir a validação deste lote, use \"Nova validação\".";
-    if (!window.confirm(aviso)) return;
+    if (!(await confirmar(aviso, situacao === "Aprovado" ? "Aprovar" : "Reprovar", situacao === "Rejeitado"))) return;
     setDecidindo(true);
-    setErro("");
     try {
       await apiSend("PATCH", `/validacoes/${detalhe.id}`, { lote: { situacao } });
       await recarregarDetalhe(detalhe.id);
+      notificar.sucesso(situacao === "Aprovado" ? "Validação aprovada." : "Validação reprovada.");
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
       // Outra pessoa pode ter decidido enquanto a tela estava aberta.
       if (erroCapturado instanceof ApiError && erroCapturado.status === 409) {
         await recarregarDetalhe(detalhe.id);
@@ -307,7 +303,6 @@ function ValidacaoConteudo() {
 
   function novaDaReprovada(base: ValidacaoDetalhe) {
     const lote = base.lotes?.[base.lotes.length - 1];
-    setErro("");
     setTentouSalvar(false);
     setOrigem(null);
     setNomes({ equipamento: base.equipamento, fabricante: base.fabricante });
@@ -345,25 +340,24 @@ function ValidacaoConteudo() {
     e.preventDefault();
     setTentouSalvar(true);
     if (!form.equipamentoId || !form.reagente.trim() || !form.fabricanteId || !form.tipoCriterio || !form.referencia.trim() || !form.erroTotal.trim()) {
-      setErro("Preencha equipamento, analito, fabricante, critério, referência e erro total.");
+      notificar.erro("Preencha equipamento, analito, fabricante, critério, referência e erro total.");
       return;
     }
     if (!erroTotalValido(form.erroTotal)) {
-      setErro("Erro total deve ser número ou percentual, como 10, 10,5 ou 10%.");
+      notificar.erro("Erro total deve ser número ou percentual, como 10, 10,5 ou 10%.");
       return;
     }
     if (!form.numero.trim() || !form.validade) {
-      setErro("Preencha o número e a validade do lote.");
+      notificar.erro("Preencha o número e a validade do lote.");
       return;
     }
     const r1 = form.resultados[0];
     if (!form.controleData || !form.analitoId || !r1.valorReferencia.trim() || (!concordancia && !r1.erroPermitido.trim()) || !r1.valorObtido.trim()) {
-      setErro("Preencha a data, o analito e o primeiro resultado.");
+      notificar.erro("Preencha a data, o analito e o primeiro resultado.");
       return;
     }
 
     setSalvando(true);
-    setErro("");
     try {
       await apiSend("POST", "/validacoes", {
         equipamentoId: form.equipamentoId,
@@ -384,9 +378,10 @@ function ValidacaoConteudo() {
         },
       });
       fecharModal();
+      notificar.sucesso("Validação cadastrada.");
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
       if (erroCapturado instanceof ApiError && erroCapturado.status === 409) list.reload();
     } finally {
       setSalvando(false);
@@ -394,13 +389,13 @@ function ValidacaoConteudo() {
   }
 
   async function excluir(id: string) {
-    if (!window.confirm("Excluir esta validação? O controle criado junto também será removido.")) return;
-    setErro("");
+    if (!(await confirmar("Excluir esta validação? O controle criado junto também será removido."))) return;
     try {
       await apiSend("DELETE", `/validacoes/${id}`);
+      notificar.sucesso("Validação excluída.");
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
       if (erroCapturado instanceof ApiError && erroCapturado.status === 409) list.reload();
     }
   }
@@ -413,13 +408,11 @@ function ValidacaoConteudo() {
           <p>Registre e acompanhe as validações de reagentes e analitos</p>
         </div>
         <div className={s.headerActions}>
-          <button type="button" className={s.btnPrimary} onClick={() => { setErro(""); setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setReprovada(null); setModal(true); if (rastreabilidadeId) router.replace("/validacao"); }}>
+          <button type="button" className={s.btnPrimary} onClick={() => { setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setReprovada(null); setModal(true); if (rastreabilidadeId) router.replace("/validacao"); }}>
             <HiOutlinePlus /> Nova Validação
           </button>
         </div>
       </div>
-
-      <Erro texto={modal || detalhe ? "" : erro || list.erro || catalogos.erro} />
 
       <div className={s.card}>
         <div className={s.searchBar}>
@@ -581,7 +574,6 @@ function ValidacaoConteudo() {
                 <textarea className={s.formTextarea} placeholder="Observações adicionais..." value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
               </div>
 
-              <Erro texto={erro} />
               <div className={s.formActions}>
                 <button type="button" className={s.btnSecondary} onClick={fecharModal}>Cancelar</button>
                 <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Salvar Validação"}</button>
@@ -655,7 +647,6 @@ function ValidacaoConteudo() {
               </>
             )}
 
-            <Erro texto={erro} />
             <div className={s.formActions}>
               <button type="button" className={s.btnSecondary} onClick={fecharDetalhe}>Fechar</button>
               {detalhe.situacao === "Em andamento" && (

@@ -16,7 +16,7 @@ import { apiGet, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
 import { cargoLabel, cargosAtribuiveis, emailValido, formatDate, iniciais } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
-import Erro from "@/components/Erro";
+import { confirmar, notificar } from "@/lib/notificar";
 import Pager from "@/components/Pager";
 import { CARGOS, type Cargo, type UsuarioLista } from "@/lib/types";
 
@@ -37,7 +37,6 @@ export default function UsuariosPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [cargo, setCargo] = useState<Cargo | "">("");
-  const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
@@ -45,7 +44,6 @@ export default function UsuariosPage() {
   }, [ready, usuario, router]);
 
   async function abrirEdicao(id: string) {
-    setErro("");
     try {
       const res = await apiGet<UsuarioLista>(`/usuarios/${id}`);
       setEditando(res.data);
@@ -53,7 +51,7 @@ export default function UsuariosPage() {
       setEmail(res.data.email);
       setCargo(res.data.cargo);
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
@@ -61,44 +59,42 @@ export default function UsuariosPage() {
     e.preventDefault();
     if (!editando) return;
     if (!nome.trim() || !email.trim() || !cargo) {
-      setErro("Preencha nome, e-mail e cargo.");
+      notificar.erro("Preencha nome, e-mail e cargo.");
       return;
     }
     if (!emailValido(email)) {
-      setErro("Informe um e-mail válido.");
+      notificar.erro("Informe um e-mail válido.");
       return;
     }
     setSalvando(true);
-    setErro("");
     try {
       await apiSend("PATCH", `/usuarios/${editando.id}`, {
         nome: nome.trim(),
         email: email.trim(),
         cargo,
       });
+      notificar.sucesso("Usuário atualizado.");
       setEditando(null);
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setSalvando(false);
     }
   }
 
   async function excluir(id: string) {
-    if (!window.confirm("Excluir este usuário?")) return;
-    setErro("");
+    if (!(await confirmar("Excluir este usuário?"))) return;
     try {
       await apiSend("DELETE", `/usuarios/${id}`);
+      notificar.sucesso("Usuário excluído.");
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
   if (!permitido) return null;
-
-  const mensagem = erro || list.erro;
 
   return (
     <div className={s.page}>
@@ -113,8 +109,6 @@ export default function UsuariosPage() {
           </Link>
         </div>
       </div>
-
-      <Erro texto={editando ? "" : mensagem} />
 
       <div className={s.card}>
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
@@ -253,7 +247,6 @@ export default function UsuariosPage() {
                   </select>
                 </div>
               </div>
-              <Erro texto={erro} />
               <div className={s.formActions}>
                 <button type="button" className={s.btnSecondary} onClick={() => setEditando(null)}>Cancelar</button>
                 <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</button>

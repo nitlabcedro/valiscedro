@@ -6,11 +6,11 @@ import Image from "next/image";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "../login.module.css";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
+import { notificar } from "@/lib/notificar";
 import { emailValido } from "@/lib/format";
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState("");
-  const [erro, setErro] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [bloqueado, setBloqueado] = useState(false);
@@ -18,17 +18,16 @@ export default function EsqueciSenhaPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!email.trim() || !emailValido(email)) {
-      setErro("Informe um e-mail válido.");
+      notificar.erro("Informe um e-mail válido.");
       return;
     }
-    setErro("");
     setEnviando(true);
     try {
       await apiSend("POST", "/auth/esqueci-senha", { email: email.trim() });
       setEnviado(true);
     } catch (erroCapturado) {
       if (erroCapturado instanceof ApiError && erroCapturado.status === 429) setBloqueado(true);
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setEnviando(false);
     }
@@ -66,7 +65,6 @@ export default function EsqueciSenhaPage() {
                 autoComplete="email"
               />
             </div>
-            {erro && <p className={styles.formError}>{erro}</p>}
             <button type="submit" className={styles.loginBtn} disabled={enviando || bloqueado}>
               {enviando ? "Enviando..." : "Enviar link"}
             </button>

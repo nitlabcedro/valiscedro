@@ -6,7 +6,6 @@ import { useList } from "@/lib/use-list";
 import { useCatalogos } from "@/lib/use-catalogos";
 import { formatDate, rotuloStatus, textoValor } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
-import Erro from "@/components/Erro";
 import Pager from "@/components/Pager";
 import { TIPOS_CRITERIO, type CadastroTipo, type ResultadoControle } from "@/lib/types";
 
@@ -245,8 +244,6 @@ function Relatorio({ config, catalogos }: { config: ConfigAba; catalogos: Catalo
         </div>
       </form>
 
-      <Erro texto={list.erro} />
-
       <div className={s.card}>
         <Tabela colunas={COLUNAS[config.key]} loading={list.loading} vazio={vazio}>
           {config.key === "controles" && <LinhasControles itens={list.items as RelatorioControle[]} />}
@@ -280,8 +277,6 @@ export default function RelatoriosPage() {
           </button>
         ))}
       </div>
-
-      <Erro texto={catalogos.erro} />
 
       <Relatorio key={aba} config={config} catalogos={catalogos} />
     </div>

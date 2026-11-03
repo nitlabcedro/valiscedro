@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "../login.module.css";
 import { apiSend, mensagemErro } from "@/lib/api";
+import { notificar } from "@/lib/notificar";
 import { emailValido, senhaCabe } from "@/lib/format";
 import type { Cargo } from "@/lib/types";
 import CampoSenha from "@/components/CampoSenha/CampoSenha";
@@ -20,28 +21,26 @@ export default function CadastroPage() {
   const [email, setEmail] = useState("");
   const [cargo, setCargo] = useState<Cargo | "">("");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!nome.trim() || !email.trim() || !cargo || !senha) {
-      setErro("Preencha nome, e-mail, cargo e senha.");
+      notificar.erro("Preencha nome, e-mail, cargo e senha.");
       return;
     }
     if (!emailValido(email)) {
-      setErro("Informe um e-mail válido.");
+      notificar.erro("Informe um e-mail válido.");
       return;
     }
     if (senha.length < 6) {
-      setErro("A senha precisa ter pelo menos 6 caracteres.");
+      notificar.erro("A senha precisa ter pelo menos 6 caracteres.");
       return;
     }
     if (!senhaCabe(senha)) {
-      setErro("Senha excede o tamanho máximo.");
+      notificar.erro("Senha excede o tamanho máximo.");
       return;
     }
-    setErro("");
     setEnviando(true);
     try {
       await apiSend("POST", "/auth/cadastro", {
@@ -50,9 +49,10 @@ export default function CadastroPage() {
         cargo,
         senha,
       });
+      notificar.sucesso("Conta criada. Entre com seu e-mail e senha.");
       router.push("/");
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setEnviando(false);
     }
@@ -125,8 +125,6 @@ export default function CadastroPage() {
               autoComplete="new-password"
             />
           </div>
-
-          {erro && <p className={styles.formError}>{erro}</p>}
 
           <button type="submit" className={styles.loginBtn} disabled={enviando}>
             {enviando ? "Criando..." : "Criar conta"}

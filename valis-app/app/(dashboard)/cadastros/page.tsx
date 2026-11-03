@@ -12,7 +12,7 @@ import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
 import { digitarErroTotal, erroTotalParaSalvar, exibirErroTotal, formatDate, numeroErroTotal } from "@/lib/format";
-import Erro from "@/components/Erro";
+import { confirmar, notificar } from "@/lib/notificar";
 import Pager from "@/components/Pager";
 import type { CadastroTipo, CatalogoItem } from "@/lib/types";
 
@@ -39,67 +39,63 @@ export default function CadastrosPage() {
   const aba = abas.find((item) => item.key === activeTab) ?? abas[0];
   const ehAnalito = activeTab === "analitos";
   const [modal, setModal] = useState<ModalCadastro | null>(null);
-  const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   function abrirNovo() {
-    setErro("");
     setModal({ nome: "", erroTotalPermitido: "", referencial: "" });
   }
 
   function abrirEdicao(item: CatalogoItem) {
-    setErro("");
     setModal({ id: item.id, nome: item.nome, erroTotalPermitido: numeroErroTotal(item.erroTotalPermitido), referencial: item.referencial ?? "" });
   }
 
   async function salvar(e: FormEvent) {
     e.preventDefault();
     if (!modal || !modal.nome.trim()) {
-      setErro("Informe o nome.");
+      notificar.erro("Informe o nome.");
       return;
     }
     const erroTotal = erroTotalParaSalvar(modal.erroTotalPermitido);
     if (ehAnalito && !erroTotal) {
-      setErro("Informe o erro total permitido apenas com números.");
+      notificar.erro("Informe o erro total permitido apenas com números.");
       return;
     }
     const corpo = ehAnalito
       ? { nome: modal.nome.trim(), erroTotalPermitido: erroTotal, referencial: modal.referencial.trim() }
       : { nome: modal.nome.trim() };
     setSalvando(true);
-    setErro("");
     try {
       if (modal.id) {
         await apiSend("PATCH", `/cadastros/${activeTab}/${modal.id}`, corpo);
       } else {
         await apiSend("POST", `/cadastros/${activeTab}`, corpo);
       }
+      notificar.sucesso(modal.id ? `${aba.singular} atualizado.` : `${aba.singular} cadastrado.`);
       setModal(null);
       list.reload();
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setSalvando(false);
     }
   }
 
   async function excluir(id: string) {
-    if (!window.confirm(`Excluir este ${aba.singular.toLowerCase()}?`)) return;
-    setErro("");
+    if (!(await confirmar(`Excluir este ${aba.singular.toLowerCase()}?`))) return;
     try {
       await apiSend("DELETE", `/cadastros/${activeTab}/${id}`);
+      notificar.sucesso(`${aba.singular} excluído.`);
       list.reload();
     } catch (erroCapturado) {
       if (ehAnalito && erroCapturado instanceof ApiError && erroCapturado.status === 409) {
         const mensagem = erroCapturado.message.trim();
-        setErro(mensagem && mensagem !== "Não foi possível concluir a operação." ? mensagem : "Este analito está em uso e não pode ser excluído.");
+        notificar.erro(mensagem && mensagem !== "Não foi possível concluir a operação." ? mensagem : "Este analito está em uso e não pode ser excluído.");
         return;
       }
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     }
   }
 
-  const mensagem = modal ? "" : erro || list.erro;
   const colunas = (podeGerenciar ? 5 : 4) + (ehAnalito ? 2 : 0);
 
   return (
@@ -127,15 +123,12 @@ export default function CadastrosPage() {
             onClick={() => {
               setActiveTab(tab.key);
               list.setQ("");
-              setErro("");
             }}
           >
             {tab.label}
           </button>
         ))}
       </div>
-
-      <Erro texto={mensagem} />
 
       <div className={s.card}>
         <div className={s.searchBar}>
@@ -245,7 +238,6 @@ export default function CadastrosPage() {
                   </div>
                 )}
               </div>
-              <Erro texto={erro} />
               <div className={s.formActions}>
                 <button type="button" className={s.btnSecondary} onClick={() => setModal(null)}>Cancelar</button>
                 <button type="submit" className={s.btnPrimary} disabled={salvando}>{salvando ? "Salvando..." : "Salvar"}</button>

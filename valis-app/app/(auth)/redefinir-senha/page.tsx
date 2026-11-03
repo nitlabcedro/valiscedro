@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "../login.module.css";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
+import { notificar } from "@/lib/notificar";
 import { senhaCabe } from "@/lib/format";
 import CampoSenha from "@/components/CampoSenha/CampoSenha";
 
@@ -15,7 +16,6 @@ function Formulario() {
   const token = params.get("token") ?? "";
   const [senha, setSenha] = useState("");
   const [confirmacao, setConfirmacao] = useState("");
-  const [erro, setErro] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [bloqueado, setBloqueado] = useState(false);
@@ -23,29 +23,28 @@ function Formulario() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!token) {
-      setErro("Link inválido. Solicite uma nova redefinição.");
+      notificar.erro("Link inválido. Solicite uma nova redefinição.");
       return;
     }
     if (senha.length < 6) {
-      setErro("A senha precisa ter pelo menos 6 caracteres.");
+      notificar.erro("A senha precisa ter pelo menos 6 caracteres.");
       return;
     }
     if (!senhaCabe(senha)) {
-      setErro("Senha excede o tamanho máximo.");
+      notificar.erro("Senha excede o tamanho máximo.");
       return;
     }
     if (senha !== confirmacao) {
-      setErro("A confirmação da senha não confere.");
+      notificar.erro("A confirmação da senha não confere.");
       return;
     }
-    setErro("");
     setEnviando(true);
     try {
       await apiSend("POST", "/auth/redefinir-senha", { token, senha });
       setEnviado(true);
     } catch (erroCapturado) {
       if (erroCapturado instanceof ApiError && erroCapturado.status === 429) setBloqueado(true);
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setEnviando(false);
     }
@@ -93,7 +92,6 @@ function Formulario() {
                 autoComplete="new-password"
               />
             </div>
-            {erro && <p className={styles.formError}>{erro}</p>}
             <button type="submit" className={styles.loginBtn} disabled={enviando || bloqueado}>
               {enviando ? "Salvando..." : "Redefinir senha"}
             </button>

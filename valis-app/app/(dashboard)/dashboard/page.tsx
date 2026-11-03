@@ -17,7 +17,7 @@ import s from "@/styles/shared.module.css";
 import dynamic from "next/dynamic";
 import { apiBlob, apiGet, mensagemErro } from "@/lib/api";
 import { formatDate, formatQuando } from "@/lib/format";
-import Erro from "@/components/Erro";
+import { notificar } from "@/lib/notificar";
 import type { DashboardDados } from "@/lib/types";
 
 const DashboardChart = dynamic(() => import("@/components/DashboardChart/DashboardChart"), { ssr: false });
@@ -46,7 +46,6 @@ function getDotClass(type: string) {
 
 export default function DashboardPage() {
   const [dados, setDados] = useState<DashboardDados | null>(null);
-  const [erro, setErro] = useState("");
   const [exportando, setExportando] = useState(false);
   const [filtro, setFiltro] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("");
@@ -58,7 +57,7 @@ export default function DashboardPage() {
         if (!cancelado) setDados(res.data);
       })
       .catch((erroCapturado: unknown) => {
-        if (!cancelado) setErro(mensagemErro(erroCapturado));
+        if (!cancelado) notificar.erro(mensagemErro(erroCapturado));
       });
     return () => {
       cancelado = true;
@@ -67,7 +66,6 @@ export default function DashboardPage() {
 
   async function exportarPdf() {
     setExportando(true);
-    setErro("");
     try {
       const blob = await apiBlob("/dashboard/export");
       const url = URL.createObjectURL(blob);
@@ -78,8 +76,9 @@ export default function DashboardPage() {
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      notificar.sucesso("PDF do dashboard exportado.");
     } catch (erroCapturado) {
-      setErro(mensagemErro(erroCapturado));
+      notificar.erro(mensagemErro(erroCapturado));
     } finally {
       setExportando(false);
     }
@@ -129,8 +128,6 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
-
-      <Erro texto={erro} />
 
       <div className={styles.statsGrid}>
         {stats.map((stat) => {
