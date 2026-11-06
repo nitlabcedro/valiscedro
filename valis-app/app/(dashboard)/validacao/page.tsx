@@ -47,6 +47,9 @@ interface FormValidacao {
   validade: string;
   controleData: string;
   analitoId: string;
+  comOS: boolean;
+  osPre: string;
+  osPos: string;
   resultados: [ResultadoForm, ResultadoForm, ResultadoForm];
 }
 
@@ -67,6 +70,9 @@ function formVazio(): FormValidacao {
     validade: "",
     controleData: "",
     analitoId: "",
+    comOS: false,
+    osPre: "",
+    osPos: "",
     resultados: [resultadoVazio(), resultadoVazio(), resultadoVazio()],
   };
 }
@@ -317,6 +323,9 @@ function ValidacaoConteudo() {
       erroTotal: textoValor(base.erroTotal),
       numero: lote?.numero ?? "",
       validade: dateInput(lote?.validade),
+      comOS: base.comOS ?? false,
+      osPre: base.osPre ?? "",
+      osPos: base.osPos ?? "",
     }, { id: base.controle?.analitoId }));
     setDetalhe(null);
     setModal(true);
@@ -331,6 +340,8 @@ function ValidacaoConteudo() {
         valorObtido: numeroOuTexto(resultado.valorObtido),
       }))
       .filter((_, indice) => {
+        // Validação com O.S só aceita o resultado 1; os demais ficam no estado, mas não são enviados.
+        if (form.comOS && indice > 0) return false;
         const r = form.resultados[indice];
         return r.valorReferencia.trim() && (concordancia || r.erroPermitido.trim()) && r.valorObtido.trim();
       });
@@ -356,6 +367,10 @@ function ValidacaoConteudo() {
       notificar.erro("Preencha a data, o analito e o primeiro resultado.");
       return;
     }
+    if (form.comOS && !form.osPre.trim() && !form.osPos.trim()) {
+      notificar.erro("Informe o número da O.S Pré ou da O.S Pós.");
+      return;
+    }
 
     setSalvando(true);
     try {
@@ -367,6 +382,8 @@ function ValidacaoConteudo() {
         referencia: form.referencia.trim(),
         erroTotal: numeroOuTexto(form.erroTotal),
         ...(form.observacoes.trim() ? { observacoes: form.observacoes.trim() } : {}),
+        comOS: form.comOS,
+        ...(form.comOS ? { osPre: form.osPre.trim() || null, osPos: form.osPos.trim() || null } : {}),
         lote: {
           numero: form.numero.trim(),
           validade: form.validade,
@@ -531,10 +548,20 @@ function ValidacaoConteudo() {
               </div>
 
               <h3 style={{ fontSize: 14, fontWeight: 600, margin: "24px 0 16px", color: "var(--text-secondary)" }}>Validação</h3>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, marginBottom: 16, cursor: "pointer" }}>
+                <input type="checkbox" checked={form.comOS} onChange={(e) => setForm({ ...form, comOS: e.target.checked })} />
+                Com O.S
+              </label>
+              {form.comOS && (
+                <div className={s.formGrid} style={{ marginBottom: 20 }}>
+                  <div className={s.formGroup}><label className={s.formLabel}>O.S Pré</label><input className={s.formInput} placeholder="Número da O.S Pré" maxLength={50} value={form.osPre} aria-invalid={faltando(!form.osPre.trim() && !form.osPos.trim())} onChange={(e) => setForm({ ...form, osPre: e.target.value })} /></div>
+                  <div className={s.formGroup}><label className={s.formLabel}>O.S Pós</label><input className={s.formInput} placeholder="Número da O.S Pós" maxLength={50} value={form.osPos} aria-invalid={faltando(!form.osPre.trim() && !form.osPos.trim())} onChange={(e) => setForm({ ...form, osPos: e.target.value })} /></div>
+                </div>
+              )}
               <div className={s.formGrid}>
                 <div className={s.formGroup}><label className={s.formLabel}>Data</label><input className={s.formInput} type="date" value={form.controleData} aria-invalid={faltando(!form.controleData)} onChange={(e) => setForm({ ...form, controleData: e.target.value })} /></div>
               </div>
-              {form.resultados.map((resultado, indice) => (
+              {form.resultados.slice(0, form.comOS ? 1 : 3).map((resultado, indice) => (
                 <div key={`resultado-${indice}`}>
                   <h4 style={{ fontSize: 13, fontWeight: 600, margin: "20px 0 12px", color: "var(--text-secondary)" }}>Resultado {indice + 1}</h4>
                   <div className={s.formGrid}>
@@ -595,6 +622,12 @@ function ValidacaoConteudo() {
               <div className={s.formGroup}><span className={s.formLabel}>Referência</span><span>{detalhe.referencia || "—"}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Erro Total</span><span>{textoValor(detalhe.erroTotal)}</span></div>
               <div className={s.formGroup}><span className={s.formLabel}>Situação</span><span className={classeSituacao(detalhe.situacao)}>{detalhe.situacao}</span></div>
+              {detalhe.comOS && (
+                <>
+                  <div className={s.formGroup}><span className={s.formLabel}>O.S Pré</span><span>{detalhe.osPre || "—"}</span></div>
+                  <div className={s.formGroup}><span className={s.formLabel}>O.S Pós</span><span>{detalhe.osPos || "—"}</span></div>
+                </>
+              )}
             </div>
             {detalhe.observacoes && (
               <div className={s.formGroup} style={{ marginTop: 16 }}>

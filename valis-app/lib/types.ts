@@ -159,6 +159,9 @@ export interface ValidacaoLista {
   erroTotal: string | number;
   situacao: "Em andamento" | "Aprovado" | "Rejeitado";
   statusControle?: "Aprovado" | "Com rejeição" | null;
+  comOS?: boolean;
+  osPre?: string | null;
+  osPos?: string | null;
   criadoEm: string;
   criadoPor: string;
 }

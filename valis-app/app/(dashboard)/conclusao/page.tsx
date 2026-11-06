@@ -83,9 +83,11 @@ export default function ConclusaoPage() {
   const [codigo, setCodigo] = useState("");
   const [aberto, setAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
-  const [situacaoValidacao, setSituacaoValidacao] = useState<Record<string, string>>({});
+  const [situacaoValidacao, setSituacaoValidacao] = useState<Record<string, { situacao: string; comOS: boolean }>>({});
+  // Validação com O.S aceita apenas o resultado 1.
+  const comOS = Boolean(validacaoId && situacaoValidacao[validacaoId]?.comOS);
 
-  // A listagem de controles não traz a situação da validação vinculada; ela só vem no detalhe da validação.
+  // A listagem de controles não traz a situação nem a O.S da validação vinculada; elas só vêm no detalhe da validação.
   useEffect(() => {
     const ids = [...new Set(list.items.flatMap((item) => (item.validacaoId ? [item.validacaoId] : [])))];
     if (ids.length === 0) return;
@@ -93,8 +95,8 @@ export default function ConclusaoPage() {
     Promise.all(
       ids.map((id) =>
         apiGet<ValidacaoDetalhe>(`/validacoes/${id}`, undefined, controller.signal)
-          .then((res) => [id, res.data.situacao as string] as const)
-          .catch(() => [id, ""] as const),
+          .then((res) => [id, { situacao: res.data.situacao as string, comOS: Boolean(res.data.comOS) }] as const)
+          .catch(() => [id, { situacao: "", comOS: false }] as const),
       ),
     ).then((pares) => {
       if (!controller.signal.aborted) setSituacaoValidacao((atual) => ({ ...atual, ...Object.fromEntries(pares) }));
@@ -142,6 +144,7 @@ export default function ConclusaoPage() {
           valorObtido: numeroOuTexto(resultado.valorObtido),
         }))
         .filter((_, indice) => {
+          if (comOS && indice > 0) return false;
           const r = form.resultados[indice];
           return r.valorReferencia.trim() && r.erroPermitido.trim() && r.valorObtido.trim();
         }),
@@ -237,7 +240,7 @@ export default function ConclusaoPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className={classeSituacao(c.status)}>{c.status}</span>
-                {!(c.validacaoId && situacaoValidacao[c.validacaoId] === "Aprovado") && (
+                {!(c.validacaoId && situacaoValidacao[c.validacaoId]?.situacao === "Aprovado") && (
                   <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(c.id)}><HiOutlinePencilSquare /></button>
                 )}
                 {c.validacaoId ? (
@@ -327,7 +330,7 @@ export default function ConclusaoPage() {
                 />
               </div>
 
-              {form.resultados.map((resultado, indice) => (
+              {form.resultados.slice(0, comOS ? 1 : 3).map((resultado, indice) => (
                 <div key={`resultado-${indice}`}>
                   <h3 style={{ fontSize: 13, fontWeight: 600, margin: "20px 0 12px", color: "var(--text-secondary)" }}>Resultado {indice + 1}</h3>
                   <div className={s.formGrid}>
