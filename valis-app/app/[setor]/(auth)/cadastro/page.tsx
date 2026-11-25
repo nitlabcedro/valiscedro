@@ -11,12 +11,14 @@ import { notificar } from "@/lib/notificar";
 import { emailValido, senhaCabe } from "@/lib/format";
 import type { Cargo } from "@/lib/types";
 import CampoSenha from "@/components/CampoSenha/CampoSenha";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 
 // Coordenador e Administrador só são atribuídos pela gestão, na tela de Usuários.
 const CARGOS_AUTOCADASTRO: Cargo[] = ["Técnico", "Bioquímico"];
 
 export default function CadastroPage() {
   const router = useRouter();
+  const rota = useRota();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [cargo, setCargo] = useState<Cargo | "">("");
@@ -50,7 +52,7 @@ export default function CadastroPage() {
         senha,
       });
       notificar.sucesso("Conta criada. Entre com seu e-mail e senha.");
-      router.push("/");
+      router.push(rota("/"));
     } catch (erroCapturado) {
       notificar.erro(mensagemErro(erroCapturado));
     } finally {
@@ -132,7 +134,7 @@ export default function CadastroPage() {
         </form>
 
         <p className={styles.footer}>
-          Já tem uma conta? <Link href="/">Entrar</Link>
+          Já tem uma conta? <Link href={rota("/")}>Entrar</Link>
         </p>
       </div>
     </div>

@@ -10,8 +10,10 @@ import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { notificar } from "@/lib/notificar";
 import { senhaCabe } from "@/lib/format";
 import CampoSenha from "@/components/CampoSenha/CampoSenha";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 
 function Formulario() {
+  const rota = useRota();
   const params = useSearchParams();
   const token = params.get("token") ?? "";
   const [senha, setSenha] = useState("");
@@ -99,7 +101,7 @@ function Formulario() {
         )}
 
         <p className={styles.footer}>
-          {enviado ? <Link href="/">Ir para o login</Link> : <Link href="/esqueci-senha">Solicitar novo link</Link>}
+          {enviado ? <Link href={rota("/")}>Ir para o login</Link> : <Link href={rota("/esqueci-senha")}>Solicitar novo link</Link>}
         </p>
       </div>
     </div>

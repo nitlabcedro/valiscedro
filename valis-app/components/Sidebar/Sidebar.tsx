@@ -13,13 +13,16 @@ import {
   HiOutlineUserCircle,
   HiOutlineBuildingOffice2,
   HiOutlineArrowRightOnRectangle,
+  HiOutlineArrowsRightLeft,
 } from "react-icons/hi2";
 import styles from "./Sidebar.module.css";
 import logo from "@/public/logoCedro.svg";
 import logoIco from "@/public/logoCedroIco.png";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { useRota, useSetor } from "@/components/SetorProvider/SetorProvider";
 import { cargoDe, podeAcessar } from "@/lib/acesso";
+import { semSetor, visualDoSetor } from "@/lib/setores";
 import { cargoLabel, iniciais } from "@/lib/format";
 import { notificar } from "@/lib/notificar";
 
@@ -51,6 +54,10 @@ const navItems: { section: string; items: { label: string; href: string; icon: t
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const caminho = semSetor(pathname);
+  const rota = useRota();
+  const setor = useSetor();
+  const { icone: IconeSetor, cor: corSetor } = visualDoSetor(setor.slug);
   const { usuario, logout } = useAuth();
   const [saindo, setSaindo] = useState(false);
   const cargo = cargoDe(usuario?.cargo);
@@ -68,6 +75,11 @@ export default function Sidebar() {
         <Image src={logo} alt="Logo Cedro" className={styles.logoFull} priority />
       </div>
 
+      <div className={styles.setor} title={setor.nome}>
+        <span className={styles.setorIcon} style={{ color: corSetor }}><IconeSetor /></span>
+        <span className={styles.navText}>{setor.nome}</span>
+      </div>
+
       <nav className={styles.nav}>
         {navItems.map((group) => {
           const items = group.items.filter((item) => podeAcessar(cargo, item.href));
@@ -76,12 +88,12 @@ export default function Sidebar() {
             <div key={group.section}>
               <div className={styles.navSection}>{group.section}</div>
               {items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const isActive = caminho === item.href || caminho.startsWith(`${item.href}/`);
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={rota(item.href)}
                     className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
                   >
                     <span className={styles.navIcon}><Icon /></span>
@@ -102,6 +114,11 @@ export default function Sidebar() {
             <div className={styles.userRole}>{usuario ? cargoLabel(usuario.cargo) : ""}</div>
           </div>
         </div>
+        {/* Cada setor tem seu próprio token: trocar não encerra a sessão deste. */}
+        <Link href="/" className={`${styles.navItem} ${styles.trocarSetor}`}>
+          <span className={styles.navIcon}><HiOutlineArrowsRightLeft /></span>
+          <span className={styles.navText}>Trocar setor</span>
+        </Link>
         <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={handleSair} disabled={saindo}>
           <span className={styles.navIcon}><HiOutlineArrowRightOnRectangle /></span>
           <span className={styles.navText}>Sair</span>

@@ -8,8 +8,10 @@ import styles from "../login.module.css";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { notificar } from "@/lib/notificar";
 import { emailValido } from "@/lib/format";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 
 export default function EsqueciSenhaPage() {
+  const rota = useRota();
   const [email, setEmail] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -72,7 +74,7 @@ export default function EsqueciSenhaPage() {
         )}
 
         <p className={styles.footer}>
-          <Link href="/">Voltar ao login</Link>
+          <Link href={rota("/")}>Voltar ao login</Link>
         </p>
       </div>
     </div>

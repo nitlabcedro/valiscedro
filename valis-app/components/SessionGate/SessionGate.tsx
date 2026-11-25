@@ -3,23 +3,28 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 import { podeAcessar, rotaInicial } from "@/lib/acesso";
+import { semSetor } from "@/lib/setores";
 
 export default function SessionGate({ children }: { children: React.ReactNode }) {
   const { ready, usuario, erroSessao, sairLocal } = useAuth();
   const router = useRouter();
+  const rota = useRota();
   const pathname = usePathname();
-  const permitido = !usuario || podeAcessar(usuario.cargo, pathname);
+  // As permissões (lib/acesso.ts) são definidas sem o setor no caminho.
+  const caminho = semSetor(pathname);
+  const permitido = !usuario || podeAcessar(usuario.cargo, caminho);
 
   useEffect(() => {
-    if (ready && !usuario && !erroSessao) router.replace("/");
-  }, [ready, usuario, erroSessao, router]);
+    if (ready && !usuario && !erroSessao) router.replace(rota("/"));
+  }, [ready, usuario, erroSessao, router, rota]);
 
   useEffect(() => {
-    if (ready && usuario && !podeAcessar(usuario.cargo, pathname)) {
-      router.replace(rotaInicial(usuario.cargo));
+    if (ready && usuario && !podeAcessar(usuario.cargo, caminho)) {
+      router.replace(rota(rotaInicial(usuario.cargo)));
     }
-  }, [ready, usuario, pathname, router]);
+  }, [ready, usuario, caminho, router, rota]);
 
   if (erroSessao) {
     return (

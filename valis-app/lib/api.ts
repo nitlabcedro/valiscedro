@@ -1,7 +1,9 @@
+import type { Setor } from "@/lib/setores";
+
 // Em desenvolvimento, aponte NEXT_PUBLIC_API_URL (.env.local) para a API local para não gravar em produção.
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api-valis.labcedro.com.br";
 export const PAGE_SIZE = 20;
-const TOKEN_KEY = "valis.token";
+const TOKEN_ANTIGO = "valis.token"; // token de antes dos setores: a API não aceita mais
 
 const ROTAS_PUBLICAS = new Set([
   "POST /auth/cadastro",
@@ -22,17 +24,31 @@ export class ApiError extends Error {
 
 export type Query = Record<string, string | number | undefined>;
 
+// O setor é sempre o primeiro trecho da URL: /imuno/dashboard -> "imuno".
+export function setorDaUrl(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.pathname.split("/")[1] ?? "";
+}
+
+function chaveToken() {
+  return `valis.token.${setorDaUrl()}`;
+}
+
 export function getToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  if (typeof window === "undefined" || !setorDaUrl()) return null;
+  return localStorage.getItem(chaveToken());
 }
 
 export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(chaveToken(), token);
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(chaveToken());
+}
+
+export function limparTokenAntigo() {
+  localStorage.removeItem(TOKEN_ANTIGO);
 }
 
 export function mensagemErro(erro: unknown) {
@@ -47,7 +63,9 @@ function rotaPublica(method: string, path: string) {
 }
 
 function montarUrl(path: string, query?: Query) {
-  const url = new URL(`${API_URL}${path.startsWith("/") ? path : `/${path}`}`);
+  const setor = setorDaUrl();
+  if (!setor) throw new ApiError(0, "Setor não identificado.");
+  const url = new URL(`${API_URL}/${setor}${path.startsWith("/") ? path : `/${path}`}`);
   if (query) {
     for (const [chave, valor] of Object.entries(query)) {
       if (valor !== undefined) url.searchParams.set(chave, String(valor));
@@ -101,8 +119,9 @@ async function request(method: string, path: string, body?: unknown, query?: Que
 
   if (res.status === 401 && !publica) {
     clearToken();
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.assign("/");
+    const login = `/${setorDaUrl()}`;
+    if (typeof window !== "undefined" && window.location.pathname !== login) {
+      window.location.assign(login);
     }
     throw new ApiError(401, await lerErro(res));
   }
@@ -134,6 +153,18 @@ export async function apiSend<T>(method: "POST" | "PATCH" | "DELETE", path: stri
 export async function apiBlob(path: string) {
   const res = await request("GET", path);
   return res.blob();
+}
+
+// Única chamada sem setor: a tela de escolha precisa dela antes de haver um.
+export async function listarSetores(): Promise<Setor[]> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/setores`);
+  } catch {
+    throw new ApiError(0, "Não foi possível conectar à API.");
+  }
+  if (!res.ok) throw new ApiError(res.status, await lerErro(res));
+  return (await res.json()) as Setor[];
 }
 
 export async function fetchAll<T>(path: string, signal?: AbortSignal) {

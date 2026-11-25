@@ -101,6 +101,13 @@
   margin-top: 12px;
 }
 
+.setorNome {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
 .form {
   display: flex;
   flex-direction: column;

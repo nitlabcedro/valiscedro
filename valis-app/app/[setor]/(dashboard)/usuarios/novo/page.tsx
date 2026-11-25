@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 import { rotaInicial } from "@/lib/acesso";
 import { apiSend, mensagemErro } from "@/lib/api";
 import { cargoLabel, cargosAtribuiveis, emailValido } from "@/lib/format";
@@ -13,6 +14,7 @@ import type { Cargo } from "@/lib/types";
 
 export default function NovoUsuarioPage() {
   const router = useRouter();
+  const rota = useRota();
   const { usuario, ready } = useAuth();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -20,8 +22,8 @@ export default function NovoUsuarioPage() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    if (ready && !isCoordenador(usuario)) router.replace(rotaInicial(usuario?.cargo));
-  }, [ready, usuario, router]);
+    if (ready && !isCoordenador(usuario)) router.replace(rota(rotaInicial(usuario?.cargo)));
+  }, [ready, usuario, router, rota]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -41,7 +43,7 @@ export default function NovoUsuarioPage() {
         cargo: cargo as Cargo,
       });
       notificar.sucesso("Usuário cadastrado.");
-      router.push("/usuarios");
+      router.push(rota("/usuarios"));
     } catch (erroCapturado) {
       notificar.erro(mensagemErro(erroCapturado));
       setEnviando(false);
@@ -102,7 +104,7 @@ export default function NovoUsuarioPage() {
           </div>
 
           <div className={s.formActions}>
-            <button type="button" className={s.btnSecondary} onClick={() => router.push("/usuarios")}>
+            <button type="button" className={s.btnSecondary} onClick={() => router.push(rota("/usuarios"))}>
               <HiOutlineArrowLeft /> Voltar
             </button>
             <button type="submit" className={s.btnPrimary} disabled={enviando}>

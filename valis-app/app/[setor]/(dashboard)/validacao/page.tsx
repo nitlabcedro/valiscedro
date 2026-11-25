@@ -26,6 +26,7 @@ import {
 } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
 import { confirmar, notificar } from "@/lib/notificar";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
 import MenuAcoes from "@/components/MenuAcoes";
@@ -116,6 +117,7 @@ function CampoLeitura({ label, value }: { label: string; value: string }) {
 
 function ValidacaoConteudo() {
   const router = useRouter();
+  const rota = useRota();
   const searchParams = useSearchParams();
   const rastreabilidadeId = searchParams.get("rastreabilidade");
   const validacaoAberta = searchParams.get("id");
@@ -214,7 +216,7 @@ function ValidacaoConteudo() {
     setOrigem(null);
     setReprovada(null);
     setTentouSalvar(false);
-    if (rastreabilidadeId) router.replace("/validacao");
+    if (rastreabilidadeId) router.replace(rota("/validacao"));
   }
 
   useEffect(() => {
@@ -436,7 +438,7 @@ function ValidacaoConteudo() {
           <p>Registre e acompanhe as validações de reagentes e analitos</p>
         </div>
         <div className={s.headerActions}>
-          <button type="button" className={s.btnPrimary} onClick={() => { setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setReprovada(null); setModal(true); if (rastreabilidadeId) router.replace("/validacao"); }}>
+          <button type="button" className={s.btnPrimary} onClick={() => { setForm(formVazio()); setNomes({ equipamento: "", fabricante: "" }); setOrigem(null); setReprovada(null); setModal(true); if (rastreabilidadeId) router.replace(rota("/validacao")); }}>
             <HiOutlinePlus /> Nova Validação
           </button>
         </div>

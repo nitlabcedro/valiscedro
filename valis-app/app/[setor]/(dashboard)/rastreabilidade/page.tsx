@@ -23,6 +23,7 @@ import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
 import MenuAcoes, { type AcaoMenu } from "@/components/MenuAcoes";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 import { cargoDe } from "@/lib/acesso";
 import { TIPOS_MATERIAL, type RastreabilidadeDetalhe, type RastreabilidadeGrupo, type RastreabilidadeLista, type RastreabilidadeNoGrupo, type TipoMaterial } from "@/lib/types";
 
@@ -177,6 +178,7 @@ const formVazio = {
 
 export default function RastreabilidadePage() {
   const router = useRouter();
+  const rota = useRota();
   const { usuario } = useAuth();
   const cargo = cargoDe(usuario?.cargo);
   const podeValidar = cargo === "Bioquímico" || cargo === "Coordenador";
@@ -215,7 +217,7 @@ export default function RastreabilidadePage() {
   }
 
   function abrirValidacao(id: string) {
-    router.push(`/validacao?rastreabilidade=${encodeURIComponent(id)}`);
+    router.push(rota(`/validacao?rastreabilidade=${encodeURIComponent(id)}`));
   }
 
   async function verDetalhe(id: string) {

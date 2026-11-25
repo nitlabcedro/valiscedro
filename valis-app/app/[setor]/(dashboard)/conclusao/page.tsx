@@ -18,6 +18,7 @@ import { useCatalogos } from "@/lib/use-catalogos";
 import { dateInput, formatDate, numeroOuTexto, opcoesAnalito, rotuloStatus, textoValor } from "@/lib/format";
 import { classeSituacao } from "@/lib/badges";
 import { confirmar, notificar } from "@/lib/notificar";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 import Pager from "@/components/Pager";
 import CatalogSelect from "@/components/CatalogSelect";
 import type { ControleValidacao, ValidacaoDetalhe } from "@/lib/types";
@@ -74,6 +75,7 @@ function doRegistro(item: ControleValidacao): FormControle {
 }
 
 export default function ConclusaoPage() {
+  const rota = useRota();
   const list = useList<ControleValidacao>("/controles-validacao");
   const catalogos = useCatalogos(["equipamentos", "analitos"]);
   const [form, setForm] = useState<FormControle>(formVazio);
@@ -244,7 +246,7 @@ export default function ConclusaoPage() {
                   <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(c.id)}><HiOutlinePencilSquare /></button>
                 )}
                 {c.validacaoId ? (
-                  <Link href={`/validacao?id=${encodeURIComponent(c.validacaoId)}`} style={{ fontSize: 12, fontWeight: 600, color: "var(--accent-blue)" }}>
+                  <Link href={rota(`/validacao?id=${encodeURIComponent(c.validacaoId)}`)} style={{ fontSize: 12, fontWeight: 600, color: "var(--accent-blue)" }}>
                     Ver validação
                   </Link>
                 ) : (

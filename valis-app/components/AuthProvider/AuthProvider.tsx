@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 import { cargoDe } from "@/lib/acesso";
 import { apiGet, apiSend, clearToken, getToken, mensagemErro, setToken } from "@/lib/api";
 import type { Usuario } from "@/lib/types";
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const rota = useRota();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [ready, setReady] = useState(false);
   const [erroSessao, setErroSessao] = useState("");
@@ -75,8 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearToken();
     setUsuario(null);
     setErroSessao("");
-    router.replace("/");
-  }, [router]);
+    router.replace(rota("/"));
+  }, [router, rota]);
 
   const logout = useCallback(async () => {
     try {
@@ -87,8 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearToken();
     setUsuario(null);
     setErroSessao("");
-    router.replace("/");
-  }, [router]);
+    router.replace(rota("/"));
+  }, [router, rota]);
 
   const value = useMemo(
     () => ({ usuario, ready, erroSessao, setSession, updateUsuario, logout, sairLocal }),

@@ -11,6 +11,7 @@ import {
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
+import { useRota } from "@/components/SetorProvider/SetorProvider";
 import { rotaInicial } from "@/lib/acesso";
 import { apiGet, apiSend, mensagemErro } from "@/lib/api";
 import { useList } from "@/lib/use-list";
@@ -22,6 +23,7 @@ import { CARGOS, type Cargo, type UsuarioLista } from "@/lib/types";
 
 export default function UsuariosPage() {
   const router = useRouter();
+  const rota = useRota();
   const { usuario, ready } = useAuth();
   const permitido = ready && isCoordenador(usuario);
   const [filtroNome, setFiltroNome] = useState("");
@@ -40,8 +42,8 @@ export default function UsuariosPage() {
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    if (ready && !isCoordenador(usuario)) router.replace(rotaInicial(usuario?.cargo));
-  }, [ready, usuario, router]);
+    if (ready && !isCoordenador(usuario)) router.replace(rota(rotaInicial(usuario?.cargo)));
+  }, [ready, usuario, router, rota]);
 
   async function abrirEdicao(id: string) {
     try {
@@ -104,7 +106,7 @@ export default function UsuariosPage() {
           <p>Gerencie os usuários e permissões do sistema</p>
         </div>
         <div className={s.headerActions}>
-          <Link href="/usuarios/novo" className={s.btnPrimary} style={{ textDecoration: "none" }}>
+          <Link href={rota("/usuarios/novo")} className={s.btnPrimary} style={{ textDecoration: "none" }}>
             <HiOutlinePlus /> Novo Usuário
           </Link>
         </div>

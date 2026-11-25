@@ -50,6 +50,33 @@
   display: none;
 }
 
+/* Setor atual: o ícone fica num quadrado branco para aparecer em qualquer cor de setor */
+.setor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 12px 18px;
+  border-bottom: 1px solid var(--border-color);
+  border-left: 4px solid rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  width: var(--sidebar-width);
+}
+
+.setorIcon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 17px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .nav {
   flex: 1;
   padding: 16px 12px;
@@ -179,6 +206,10 @@
 .userRole {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.trocarSetor {
+  margin-top: 4px;
 }
 
 .logout {

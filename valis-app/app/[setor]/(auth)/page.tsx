@@ -9,6 +9,7 @@ import styles from "./login.module.css";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
 import { notificar } from "@/lib/notificar";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
+import { useRota, useSetor } from "@/components/SetorProvider/SetorProvider";
 import { rotaInicial } from "@/lib/acesso";
 import type { Usuario } from "@/lib/types";
 import CampoSenha from "@/components/CampoSenha/CampoSenha";
@@ -16,6 +17,8 @@ import CampoSenha from "@/components/CampoSenha/CampoSenha";
 export default function LoginPage() {
   const router = useRouter();
   const { setSession } = useAuth();
+  const setor = useSetor();
+  const rota = useRota();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -36,7 +39,7 @@ export default function LoginPage() {
       });
       setSession(data.token, data.usuario);
       notificar.sucesso(`Olá, ${data.usuario.nome.split(" ")[0]}. Login realizado.`);
-      router.push(rotaInicial(data.usuario.cargo));
+      router.push(rota(rotaInicial(data.usuario.cargo)));
     } catch (erroCapturado) {
       if (erroCapturado instanceof ApiError && erroCapturado.status === 429) setBloqueado(true);
       notificar.erro(mensagemErro(erroCapturado));
@@ -57,6 +60,7 @@ export default function LoginPage() {
             style={{ objectFit: "contain" }}
           />
           <span className={styles.systemName}>Valis</span>
+          <span className={styles.setorNome}>{setor.nome}</span>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -86,7 +90,7 @@ export default function LoginPage() {
               onChange={(e) => setSenha(e.target.value)}
               autoComplete="current-password"
             />
-            <Link href="/esqueci-senha" className={styles.forgotPassword}>
+            <Link href={rota("/esqueci-senha")} className={styles.forgotPassword}>
               Esqueceu a senha?
             </Link>
           </div>
@@ -97,7 +101,10 @@ export default function LoginPage() {
         </form>
 
         <p className={styles.footer}>
-          Não tem uma conta? <Link href="/cadastro">Cadastre-se</Link>
+          Não tem uma conta? <Link href={rota("/cadastro")}>Cadastre-se</Link>
+        </p>
+        <p className={styles.footer}>
+          <Link href="/">Trocar setor</Link>
         </p>
       </div>
     </div>
