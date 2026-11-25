@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: nova-tela-lotes
+expected_outcome: |
+  Página nova no padrão do Valis: s.page/s.header/s.card, busca, tabela com estados de carregando e vazio, Pager, badge de situação via classeSituacao, modal com s.formGrid/s.formActions, notificar/confirmar, ícones hi2 Outline, sem style inline estático e sem cores literais.

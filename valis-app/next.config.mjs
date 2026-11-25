@@ -8,11 +8,15 @@ const ROTAS_ANTIGAS = [
 const nextConfig = {
   reactStrictMode: true,
   async redirects() {
-    return ROTAS_ANTIGAS.map((rota) => ({
-      source: `/${rota}/:resto*`,
-      destination: `/imuno/${rota}/:resto*`,
-      permanent: false, // temporário: some quando ninguém mais usar os endereços antigos
-    }));
+    return [
+      // A raiz abre o login da imuno; os outros setores são escolhidos pelos botões do login.
+      { source: "/", destination: "/imuno", permanent: false },
+      ...ROTAS_ANTIGAS.map((rota) => ({
+        source: `/${rota}/:resto*`,
+        destination: `/imuno/${rota}/:resto*`,
+        permanent: false, // temporário: some quando ninguém mais usar os endereços antigos
+      })),
+    ];
   },
 };
 

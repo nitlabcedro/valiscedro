@@ -1,3 +1,5 @@
+/* Telas de autenticação (login, cadastro, esqueci/redefinir senha). */
+
 .loginContainer {
   display: flex;
   min-height: 100vh;
@@ -5,7 +7,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #091a0f;
+  background: var(--bg-auth);
   background-image:
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(7, 86, 24, 0.35), transparent),
     radial-gradient(ellipse 60% 40% at 80% 110%, rgba(10, 123, 34, 0.18), transparent);
@@ -14,7 +16,7 @@
   color: #fff;
 }
 
-/* Subtle grid pattern */
+/* Grade sutil ao fundo */
 .loginContainer::before {
   content: '';
   position: absolute;
@@ -26,7 +28,7 @@
   pointer-events: none;
 }
 
-/* Ambient glow behind card */
+/* Brilho atrás do card */
 .loginContainer::after {
   content: '';
   position: absolute;
@@ -44,68 +46,141 @@
 .loginCard {
   width: 100%;
   max-width: 440px;
-  background: #ffffff;
+  background: var(--bg-secondary);
   color: var(--text-primary);
-  border-radius: 24px;
-  padding: 48px 40px;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.4),
-    0 0 80px rgba(7, 86, 24, 0.06);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  box-shadow: var(--shadow-xl);
   position: relative;
   z-index: 1;
+  overflow: hidden;
   animation: cardIn 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Faixa no topo com a cor do setor atual (--cor-setor vem do style do card) */
+.loginCardSetor::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--cor-setor, var(--accent-blue));
+  transition: background var(--transition-normal);
 }
 
 .loginCard input,
 .loginCard select {
   padding: 12px 16px;
-  background-color: #f8faf9;
-  border: 1.5px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.loginCard input:hover,
+.loginCard select:hover {
+  border-color: var(--border-color-hover);
 }
 
 .loginCard input:focus,
 .loginCard select:focus {
-  border-color: #075618;
+  border-color: var(--accent-blue);
   box-shadow: 0 0 0 3px rgba(7, 86, 24, 0.1);
-  background-color: #fff;
+  background-color: var(--bg-secondary);
   outline: none;
 }
 
 .loginCard input::placeholder {
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
   text-align: center;
 }
 
 .brand p {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text-secondary);
   margin-top: 4px;
+}
+
+.logo {
+  object-fit: contain;
 }
 
 .systemName {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #075618;
+  color: var(--accent-blue);
   margin-top: 12px;
 }
 
-.setorNome {
-  font-size: 15px;
+.titulo {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.titulo h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.titulo p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Botões de setor: cada um usa a própria cor (--cor-setor, definida no style do botão) */
+.setores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 24px;
+}
+
+.setorBotao {
+  --cor-setor: var(--accent-blue);
+  flex: 1 1 0;
+  min-width: 100px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-top: 4px;
+  background: var(--bg-secondary);
+  transition: border-color var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.setorBotao:hover {
+  border-color: var(--cor-setor);
+  color: var(--cor-setor);
+}
+
+.setorBotao:focus-visible {
+  outline: 2px solid var(--cor-setor);
+  outline-offset: 2px;
+}
+
+.setorAtivo,
+.setorAtivo:hover {
+  border-color: var(--cor-setor);
+  background: var(--cor-setor);
+  color: #fff;
 }
 
 .form {
@@ -114,38 +189,51 @@
   gap: 20px;
 }
 
+/* Rótulo do campo com um link à direita (ex.: "Esqueceu a senha?") */
+.labelLinha {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
 .forgotPassword {
-  display: block;
-  text-align: right;
-  font-size: 13px;
-  font-weight: 500;
-  color: #075618;
-  margin-top: 6px;
-  transition: color 150ms ease;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-blue);
+  transition: color var(--transition-fast);
 }
 
 .forgotPassword:hover {
-  color: #0a7b22;
+  color: var(--accent-blue-hover);
+  text-decoration: underline;
 }
 
 .loginBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   width: 100%;
   padding: 14px;
-  margin-top: 8px;
-  font-size: 15px;
+  margin-top: 4px;
+  font-size: 14px;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: none;
-  background: linear-gradient(135deg, #075618, #0a7b22);
+  background: var(--gradient-blue);
   color: #fff;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
   box-shadow: 0 4px 15px rgba(7, 86, 24, 0.25);
+}
+
+.loginBtn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .loginBtn::after {
@@ -160,7 +248,7 @@
 }
 
 .loginBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: 0 8px 25px rgba(7, 86, 24, 0.35);
 }
 
@@ -173,13 +261,18 @@
   box-shadow: 0 2px 10px rgba(7, 86, 24, 0.2);
 }
 
+.loginBtn:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
 .loginBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 .footer {
-  margin-top: 28px;
+  margin-top: 24px;
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
@@ -187,23 +280,39 @@
 
 .footer a {
   font-weight: 600;
-  color: #075618;
-  transition: color 150ms ease;
+  color: var(--accent-blue);
+  transition: color var(--transition-fast);
 }
 
 .footer a:hover {
-  color: #0a7b22;
+  color: var(--accent-blue-hover);
+  text-decoration: underline;
 }
 
 .formError {
   font-size: 13px;
   font-weight: 500;
-  color: #dc2626;
+  color: var(--accent-red-dark);
   padding: 10px 14px;
-  background: #fef2f2;
+  background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(220, 38, 38, 0.12);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   line-height: 1.4;
+}
+
+/* Aviso que fica na tela enquanto o login está bloqueado */
+.formAviso {
+  composes: formError;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.formAviso svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 @keyframes cardIn {
@@ -227,9 +336,26 @@
   to { left: 100%; }
 }
 
+/* Quem pede menos movimento no sistema operacional não vê as animações decorativas */
+@media (prefers-reduced-motion: reduce) {
+  .loginContainer::after,
+  .loginCard,
+  .loginBtn:hover:not(:disabled)::after {
+    animation: none;
+  }
+
+  .loginBtn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
 @media (max-width: 480px) {
+  .loginContainer {
+    padding: 16px;
+  }
+
   .loginCard {
-    padding: 36px 24px;
-    border-radius: 20px;
+    padding: 32px 20px;
+    border-radius: var(--radius-lg);
   }
 }

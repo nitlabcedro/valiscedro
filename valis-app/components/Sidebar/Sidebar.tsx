@@ -20,7 +20,7 @@ import logo from "@/public/logoCedro.svg";
 import logoIco from "@/public/logoCedroIco.png";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider/AuthProvider";
-import { useRota, useSetor } from "@/components/SetorProvider/SetorProvider";
+import { useRota, useSetor, useSetores } from "@/components/SetorProvider/SetorProvider";
 import { cargoDe, podeAcessar } from "@/lib/acesso";
 import { semSetor, visualDoSetor } from "@/lib/setores";
 import { cargoLabel, iniciais } from "@/lib/format";
@@ -57,6 +57,7 @@ export default function Sidebar() {
   const caminho = semSetor(pathname);
   const rota = useRota();
   const setor = useSetor();
+  const outrosSetores = useSetores().filter((item) => item.slug !== setor.slug);
   const { icone: IconeSetor, cor: corSetor } = visualDoSetor(setor.slug);
   const { usuario, logout } = useAuth();
   const [saindo, setSaindo] = useState(false);
@@ -114,11 +115,23 @@ export default function Sidebar() {
             <div className={styles.userRole}>{usuario ? cargoLabel(usuario.cargo) : ""}</div>
           </div>
         </div>
-        {/* Cada setor tem seu próprio token: trocar não encerra a sessão deste. */}
-        <Link href="/" className={`${styles.navItem} ${styles.trocarSetor}`}>
-          <span className={styles.navIcon}><HiOutlineArrowsRightLeft /></span>
-          <span className={styles.navText}>Trocar setor</span>
-        </Link>
+        {/* Cada setor tem seu próprio token: trocar não encerra a sessão deste.
+            O login do outro setor entra direto se já houver sessão lá. */}
+        {outrosSetores.length > 0 && (
+          <div className={styles.trocarSetor}>
+            <div className={styles.navSection}>Trocar setor</div>
+            {outrosSetores.map((item) => {
+              const { icone: Icone } = visualDoSetor(item.slug);
+              return (
+                <Link key={item.slug} href={`/${item.slug}`} className={styles.navItem} title={`Ir para ${item.nome}`}>
+                  <span className={styles.navIcon}><Icone /></span>
+                  <span className={styles.navText}>{item.nome}</span>
+                  <span className={`${styles.navIcon} ${styles.trocarSeta}`}><HiOutlineArrowsRightLeft /></span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
         <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={handleSair} disabled={saindo}>
           <span className={styles.navIcon}><HiOutlineArrowRightOnRectangle /></span>
           <span className={styles.navText}>Sair</span>

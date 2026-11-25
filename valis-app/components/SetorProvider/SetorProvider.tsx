@@ -1,28 +1,38 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AuthProvider } from "@/components/AuthProvider/AuthProvider";
 import { limparTokenAntigo, listarSetores, mensagemErro } from "@/lib/api";
 import type { Setor } from "@/lib/setores";
 
-const SetorContext = createContext<Setor | null>(null);
+const SetorContext = createContext<{ setor: Setor; setores: Setor[] } | null>(null);
+
+// A lista é buscada uma vez por carregamento da página: trocar de setor não mostra "Carregando..." de novo.
+let listaCarregada: Setor[] | null = null;
+let carregando: Promise<Setor[]> | null = null;
+
+function carregarSetores() {
+  carregando ??= listarSetores()
+    .then((lista) => (listaCarregada = lista))
+    .catch((erro: unknown) => {
+      carregando = null; // permite tentar de novo
+      throw erro;
+    });
+  return carregando;
+}
 
 export function SetorProvider({ slug, children }: { slug: string; children: React.ReactNode }) {
-  const [setor, setSetor] = useState<Setor | null>(null);
+  const [setores, setSetores] = useState<Setor[] | null>(listaCarregada);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
     limparTokenAntigo();
+    if (setores) return;
     let cancelado = false;
-    setSetor(null);
-    setErro("");
-    listarSetores()
+    carregarSetores()
       .then((lista) => {
-        if (cancelado) return;
-        const achado = lista.find((item) => item.slug === slug);
-        if (achado) setSetor(achado);
-        else setErro("Setor não encontrado.");
+        if (!cancelado) setSetores(lista);
       })
       .catch((e: unknown) => {
         if (!cancelado) setErro(mensagemErro(e));
@@ -30,18 +40,22 @@ export function SetorProvider({ slug, children }: { slug: string; children: Reac
     return () => {
       cancelado = true;
     };
-  }, [slug]);
+  }, [setores]);
 
-  if (erro) {
+  const setor = setores?.find((item) => item.slug === slug);
+  const valor = useMemo(() => (setores && setor ? { setor, setores } : null), [setor, setores]);
+  const mensagem = erro || (setores && !setor ? "Setor não encontrado." : "");
+
+  if (mensagem) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24, textAlign: "center" }}>
-        <p style={{ color: "var(--accent-red)" }}>{erro}</p>
-        <Link href="/" style={{ fontWeight: 600 }}>Escolher setor</Link>
+        <p style={{ color: "var(--accent-red)" }}>{mensagem}</p>
+        <Link href="/" style={{ fontWeight: 600 }}>Ir para o login</Link>
       </div>
     );
   }
 
-  if (!setor) {
+  if (!valor) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)" }}>
         Carregando...
@@ -50,17 +64,27 @@ export function SetorProvider({ slug, children }: { slug: string; children: Reac
   }
 
   return (
-    <SetorContext.Provider value={setor}>
+    <SetorContext.Provider value={valor}>
       {/* key: trocar de setor recria a sessão do zero */}
-      <AuthProvider key={setor.slug}>{children}</AuthProvider>
+      <AuthProvider key={valor.setor.slug}>{children}</AuthProvider>
     </SetorContext.Provider>
   );
 }
 
+function useSetorContext() {
+  const context = useContext(SetorContext);
+  if (!context) throw new Error("useSetor precisa estar dentro de SetorProvider");
+  return context;
+}
+
+// O setor da URL atual.
 export function useSetor(): Setor {
-  const setor = useContext(SetorContext);
-  if (!setor) throw new Error("useSetor precisa estar dentro de SetorProvider");
-  return setor;
+  return useSetorContext().setor;
+}
+
+// Todos os setores que a API informou.
+export function useSetores(): Setor[] {
+  return useSetorContext().setores;
 }
 
 // rota("/usuarios") -> "/imuno/usuarios"; rota("/") -> "/imuno" (login do setor)

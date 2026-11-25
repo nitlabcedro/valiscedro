@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: filtro-perfil-usuarios
+expected_outcome: |
+  Select de filtro adicionado com s.formSelect ao lado da busca, layout lado a lado via classe CSS (não inline), e os style inline estáticos do trecho tocado convertidos em classes, sem refatorar a página inteira.
