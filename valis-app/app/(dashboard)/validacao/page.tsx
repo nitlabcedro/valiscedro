@@ -7,6 +7,8 @@ import {
   HiOutlineMagnifyingGlass,
   HiOutlineTrash,
   HiOutlineEye,
+  HiOutlineCheckCircle,
+  HiOutlineXCircle,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { ApiError, apiGet, apiSend, mensagemErro } from "@/lib/api";
@@ -283,23 +285,22 @@ function ValidacaoConteudo() {
     setDetalhe(null);
   }
 
-  async function decidir(situacao: "Aprovado" | "Rejeitado") {
-    if (!detalhe) return;
+  async function decidir(id: string, situacao: "Aprovado" | "Rejeitado") {
     const aviso = situacao === "Aprovado"
       ? "Depois de aprovada, esta validação não poderá ser alterada nem excluída."
       : "Depois de reprovada, esta decisão não poderá ser desfeita. Para repetir a validação deste lote, use \"Nova validação\".";
     if (!(await confirmar(aviso, situacao === "Aprovado" ? "Aprovar" : "Reprovar", situacao === "Rejeitado"))) return;
     setDecidindo(true);
     try {
-      await apiSend("PATCH", `/validacoes/${detalhe.id}`, { lote: { situacao } });
-      await recarregarDetalhe(detalhe.id);
+      await apiSend("PATCH", `/validacoes/${id}`, { lote: { situacao } });
+      if (detalhe?.id === id) await recarregarDetalhe(id);
       notificar.sucesso(situacao === "Aprovado" ? "Validação aprovada." : "Validação reprovada.");
       list.reload();
     } catch (erroCapturado) {
       notificar.erro(mensagemErro(erroCapturado));
       // Outra pessoa pode ter decidido enquanto a tela estava aberta.
       if (erroCapturado instanceof ApiError && erroCapturado.status === 409) {
-        await recarregarDetalhe(detalhe.id);
+        if (detalhe?.id === id) await recarregarDetalhe(id);
         list.reload();
       }
     } finally {
@@ -329,6 +330,16 @@ function ValidacaoConteudo() {
     }, { id: base.controle?.analitoId }));
     setDetalhe(null);
     setModal(true);
+  }
+
+  // "Nova validação" pelo menu da tabela: a listagem não traz lote/IDs, então busca o detalhe antes.
+  async function novaDaReprovadaPorId(id: string) {
+    try {
+      const res = await apiGet<ValidacaoDetalhe>(`/validacoes/${id}`);
+      novaDaReprovada(res.data);
+    } catch (erroCapturado) {
+      notificar.erro(mensagemErro(erroCapturado));
+    }
   }
 
   function resultadosPayload() {
@@ -477,6 +488,13 @@ function ValidacaoConteudo() {
                     <MenuAcoes
                       acoes={[
                         { rotulo: "Ver detalhes", icone: <HiOutlineEye />, onClick: () => verDetalhe(v.id) },
+                        ...(v.situacao === "Em andamento" ? [
+                          { rotulo: "Aprovar", icone: <HiOutlineCheckCircle />, onClick: () => decidir(v.id, "Aprovado") },
+                          { rotulo: "Reprovar", icone: <HiOutlineXCircle />, onClick: () => decidir(v.id, "Rejeitado"), perigo: true },
+                        ] : []),
+                        ...(v.situacao === "Rejeitado" ? [
+                          { rotulo: "Nova validação", icone: <HiOutlinePlus />, onClick: () => novaDaReprovadaPorId(v.id) },
+                        ] : []),
                         ...(v.situacao === "Aprovado" ? [] : [{ rotulo: "Excluir", icone: <HiOutlineTrash />, onClick: () => excluir(v.id), perigo: true }]),
                       ]}
                     />
@@ -684,8 +702,8 @@ function ValidacaoConteudo() {
               <button type="button" className={s.btnSecondary} onClick={fecharDetalhe}>Fechar</button>
               {detalhe.situacao === "Em andamento" && (
                 <>
-                  <button type="button" className={s.btnDanger} disabled={decidindo} onClick={() => decidir("Rejeitado")}>Reprovar</button>
-                  <button type="button" className={s.btnPrimary} disabled={decidindo} onClick={() => decidir("Aprovado")}>Aprovar</button>
+                  <button type="button" className={s.btnDanger} disabled={decidindo} onClick={() => decidir(detalhe.id, "Rejeitado")}>Reprovar</button>
+                  <button type="button" className={s.btnPrimary} disabled={decidindo} onClick={() => decidir(detalhe.id, "Aprovado")}>Aprovar</button>
                 </>
               )}
               {detalhe.situacao === "Rejeitado" && (

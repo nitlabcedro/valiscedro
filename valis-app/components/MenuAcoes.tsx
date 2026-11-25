@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { HiOutlineBars3 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 
@@ -15,11 +16,13 @@ export default function MenuAcoes({ acoes }: { acoes: AcaoMenu[] }) {
   const [aberto, setAberto] = useState(false);
   const [posicao, setPosicao] = useState({ top: 0, left: 0 });
   const raiz = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!aberto) return;
     function aoClicar(evento: MouseEvent) {
-      if (!raiz.current?.contains(evento.target as Node)) setAberto(false);
+      const alvo = evento.target as Node;
+      if (!raiz.current?.contains(alvo) && !menu.current?.contains(alvo)) setAberto(false);
     }
     function aoTeclar(evento: KeyboardEvent) {
       if (evento.key === "Escape") setAberto(false);
@@ -54,8 +57,10 @@ export default function MenuAcoes({ acoes }: { acoes: AcaoMenu[] }) {
       <button type="button" className={s.iconBtn} aria-label="Ações" aria-expanded={aberto} aria-haspopup="menu" onClick={alternar}>
         <HiOutlineBars3 size={18} />
       </button>
-      {aberto && (
-        <div className={s.acaoMenu} role="menu" style={{ top: posicao.top, left: posicao.left }}>
+      {/* Portal no body: ancestrais com backdrop-filter (ex.: .card) viram o "containing block" de
+          elementos fixed, e o overflow da tabela cortava os itens do menu. */}
+      {aberto && createPortal(
+        <div ref={menu} className={s.acaoMenu} role="menu" style={{ top: posicao.top, left: posicao.left }}>
           {acoes.map((acao) => (
             <button
               key={acao.rotulo}
@@ -71,7 +76,8 @@ export default function MenuAcoes({ acoes }: { acoes: AcaoMenu[] }) {
               {acao.rotulo}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
