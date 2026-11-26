@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 *,
 *::before,
 *::after {
@@ -9,6 +7,9 @@
 }
 
 :root {
+  /* Fonte (--font-roboto vem do next/font, em lib/fonte.ts) */
+  --font-sans: var(--font-roboto), 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
   /* Colors */
   --bg-primary: #f0f4f2;
   --bg-secondary: #ffffff;
@@ -16,7 +17,8 @@
   --bg-card-hover: rgba(255, 255, 255, 1);
   --bg-input: #ffffff;
   --bg-sidebar: #075618;
-  --bg-auth: #091a0f; /* fundo escuro das telas de login/cadastro */
+  --bg-auth: #133a27; /* verde profundo da vitrine do login */
+  --bg-auth-escuro: #07180f;
 
   /* Text */
   --text-primary: #111827;
@@ -42,6 +44,14 @@
   /* Borders */
   --border-color: rgba(0, 0, 0, 0.08);
   --border-color-hover: rgba(0, 0, 0, 0.15);
+  /* Campos de formulário: contraste ≥ 3:1 com o fundo branco (WCAG 1.4.11) */
+  --border-input: #8f9b94; /* cinza puxado para o verde da marca */
+  --border-input-hover: #6b7a72;
+  --bg-input-disabled: #f3f6f4;
+  --text-placeholder: #8b929c;
+  --shadow-input: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --focus-ring: 0 0 0 4px rgba(7, 86, 24, 0.12);
+  --focus-ring-error: 0 0 0 4px rgba(239, 68, 68, 0.15);
 
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -70,7 +80,7 @@
 html,
 body {
   height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;

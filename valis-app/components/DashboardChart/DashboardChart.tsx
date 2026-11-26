@@ -16,6 +16,10 @@ import {
 } from "chart.js";
 import { Chart } from "react-chartjs-2";
 import { formatDia } from "@/lib/format";
+import { roboto } from "@/lib/fonte";
+
+// O canvas do Chart.js não herda o CSS: precisa do nome real da fonte gerado pelo next/font.
+const FONTE = roboto.style.fontFamily;
 
 ChartJS.register(
   CategoryScale,
@@ -53,7 +57,7 @@ const options = {
         borderRadius: 3,
         useBorderRadius: true,
         padding: 16,
-        font: { size: 12, family: "Inter" },
+        font: { size: 12, family: FONTE },
       },
     },
     tooltip: {
@@ -64,19 +68,19 @@ const options = {
       borderWidth: 1,
       cornerRadius: 8,
       padding: 12,
-      titleFont: { size: 13, weight: "bold" as const, family: "Inter" },
-      bodyFont: { size: 12, family: "Inter" },
+      titleFont: { size: 13, weight: "bold" as const, family: FONTE },
+      bodyFont: { size: 12, family: FONTE },
     },
   },
   scales: {
     x: {
       grid: { color: "rgba(0,0,0,0.04)" },
-      ticks: { color: "rgba(0,0,0,0.4)", font: { size: 12, family: "Inter" } },
+      ticks: { color: "rgba(0,0,0,0.4)", font: { size: 12, family: FONTE } },
       border: { display: false },
     },
     y: {
       grid: { color: "rgba(0,0,0,0.04)" },
-      ticks: { color: "rgba(0,0,0,0.4)", font: { size: 12, family: "Inter" } },
+      ticks: { color: "rgba(0,0,0,0.4)", font: { size: 12, family: FONTE } },
       border: { display: false },
       beginAtZero: true,
     },

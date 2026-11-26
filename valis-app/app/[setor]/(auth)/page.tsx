@@ -4,7 +4,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { HiOutlineArrowRightEndOnRectangle, HiOutlineExclamationTriangle } from "react-icons/hi2";
+import {
+  HiOutlineEnvelope,
+  HiOutlineExclamationTriangle,
+  HiOutlineLockClosed,
+} from "react-icons/hi2";
 import sharedStyles from "@/styles/shared.module.css";
 import styles from "./login.module.css";
 import { ApiError, apiSend, mensagemErro } from "@/lib/api";
@@ -56,23 +60,17 @@ export default function LoginPage() {
     }
   }
 
-  const corSetor = visualDoSetor(setor.slug).cor;
-
   return (
     <div className={styles.loginContainer}>
-      {/* --cor-setor vem do setor atual (dado dinâmico): pinta a faixa no topo do card */}
-      <div className={`${styles.loginCard} ${styles.loginCardSetor}`} style={{ "--cor-setor": corSetor } as React.CSSProperties}>
-        <div className={styles.brand}>
-          <Image src="/logoCedro.svg" alt="Logo Cedro" width={200} height={72} className={styles.logo} priority />
-          <span className={styles.systemName}>Valis</span>
-        </div>
+      <div className={styles.loginCard}>
+        <Image src="/logoCedro.svg" alt="Laboratório Cedro" width={190} height={60} className={styles.logoTopo} priority />
 
         <div className={styles.titulo}>
-          <h1>Acesse sua conta</h1>
-          <p>Entre com seu e-mail e senha para continuar.</p>
+          <h1>Login</h1>
+          <p>Acesse o Valis para continuar</p>
         </div>
 
-        <span className={sharedStyles.formLabel} id="rotulo-setor">Setor</span>
+        <span className={`${sharedStyles.formLabel} ${styles.rotulo}`} id="rotulo-setor">Setor</span>
         <nav className={styles.setores} aria-labelledby="rotulo-setor">
           {setores.map((item) => {
             const { icone: Icone, cor } = visualDoSetor(item.slug);
@@ -95,36 +93,43 @@ export default function LoginPage() {
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={sharedStyles.formGroup}>
-            <label className={sharedStyles.formLabel} htmlFor="email">E-mail</label>
-            <input
-              id="email"
-              className={sharedStyles.formInput}
-              type="email"
-              placeholder="nome@laboratorio.com.br"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setBloqueado(false);
-              }}
-              autoComplete="email"
-            />
+            <label className={sharedStyles.formLabel} htmlFor="email">E-mail corporativo</label>
+            <div className={styles.campoIcone}>
+              <HiOutlineEnvelope aria-hidden />
+              <input
+                id="email"
+                className={sharedStyles.formInput}
+                type="email"
+                placeholder="nome@laboratorio.com.br"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setBloqueado(false);
+                }}
+                autoComplete="email"
+              />
+            </div>
           </div>
 
           <div className={sharedStyles.formGroup}>
-            <div className={styles.labelLinha}>
-              <label className={sharedStyles.formLabel} htmlFor="senha">Senha</label>
-              <Link href={rota("/esqueci-senha")} className={styles.forgotPassword}>
-                Esqueceu a senha?
-              </Link>
+            <label className={sharedStyles.formLabel} htmlFor="senha">Senha</label>
+            <div className={styles.campoIcone}>
+              <HiOutlineLockClosed aria-hidden />
+              <CampoSenha
+                id="senha"
+                className={sharedStyles.formInput}
+                placeholder="Digite sua senha"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                autoComplete="current-password"
+              />
             </div>
-            <CampoSenha
-              id="senha"
-              className={sharedStyles.formInput}
-              placeholder="••••••••"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              autoComplete="current-password"
-            />
+          </div>
+
+          <div className={styles.linhaSenha}>
+            <Link href={rota("/esqueci-senha")} className={styles.forgotPassword}>
+              Esqueci minha senha
+            </Link>
           </div>
 
           {/* O toast some; este aviso explica por que o botão continua desabilitado. */}
@@ -136,13 +141,12 @@ export default function LoginPage() {
           )}
 
           <button type="submit" className={styles.loginBtn} disabled={enviando || bloqueado} aria-busy={enviando}>
-            <HiOutlineArrowRightEndOnRectangle aria-hidden />
-            {enviando ? "Entrando..." : "Acessar"}
+            {enviando ? "Entrando..." : "Entrar"}
           </button>
         </form>
 
         <p className={styles.footer}>
-          Não tem uma conta? <Link href={rota("/cadastro")}>Cadastre-se</Link>
+          Não possui conta? <Link href={rota("/cadastro")}>Criar cadastro</Link>
         </p>
       </div>
     </div>

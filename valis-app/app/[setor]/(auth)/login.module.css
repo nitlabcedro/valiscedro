@@ -1,99 +1,88 @@
-/* Telas de autenticação (login, cadastro, esqueci/redefinir senha). */
+/* Card das telas de autenticação (login, cadastro, esqueci/redefinir senha).
+   A moldura (vitrine verde + fundo claro) fica em layout.module.css. */
 
 .loginContainer {
+  flex: 1;
   display: flex;
-  min-height: 100vh;
-  min-height: 100dvh;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: var(--bg-auth);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(7, 86, 24, 0.35), transparent),
-    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(10, 123, 34, 0.18), transparent);
-  position: relative;
-  overflow: hidden;
-  color: #fff;
-}
-
-/* Grade sutil ao fundo */
-.loginContainer::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 64px 64px;
-  pointer-events: none;
-}
-
-/* Brilho atrás do card */
-.loginContainer::after {
-  content: '';
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(7, 86, 24, 0.15), transparent 60%);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: breathe 10s ease-in-out infinite;
-  pointer-events: none;
+  padding: 48px 40px;
 }
 
 .loginCard {
+  --respiro: 44px;
   width: 100%;
-  max-width: 440px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border-radius: var(--radius-xl);
-  padding: 40px;
-  box-shadow: var(--shadow-xl);
-  position: relative;
-  z-index: 1;
+  max-width: 500px;
+  padding: 44px var(--respiro) 0;
   overflow: hidden;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 30px 70px rgba(7, 86, 24, 0.1), 0 6px 20px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   animation: cardIn 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Faixa no topo com a cor do setor atual (--cor-setor vem do style do card) */
-.loginCardSetor::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--cor-setor, var(--accent-blue));
-  transition: background var(--transition-normal);
+/* Rótulos em caixa normal, mais leves que os do restante do sistema */
+.loginCard label,
+.rotulo {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-primary);
 }
 
+/* Campos mais altos, com fundo levemente esverdeado que fica branco no foco */
 .loginCard input,
 .loginCard select {
-  padding: 12px 16px;
-  background-color: var(--bg-primary);
-  border: 1.5px solid var(--border-color);
+  padding-top: 15px;
+  padding-bottom: 15px;
+  background-color: rgba(240, 244, 242, 0.55);
+  border-color: var(--border-color-hover);
   border-radius: var(--radius-md);
-  font-size: 14px;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+  box-shadow: none;
 }
 
-.loginCard input:hover,
-.loginCard select:hover {
-  border-color: var(--border-color-hover);
+.loginCard input:hover:not(:disabled),
+.loginCard select:hover:not(:disabled) {
+  border-color: var(--border-input);
 }
 
 .loginCard input:focus,
 .loginCard select:focus {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(7, 86, 24, 0.1);
   background-color: var(--bg-secondary);
-  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: var(--focus-ring);
 }
 
-.loginCard input::placeholder {
+/* Campo com ícone à esquerda (o ícone acende quando o campo recebe foco) */
+.campoIcone {
+  position: relative;
+}
+
+.campoIcone > svg {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  z-index: 1;
+  width: 19px;
+  height: 19px;
+  transform: translateY(-50%);
   color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--transition-fast);
+}
+
+.campoIcone:focus-within > svg {
+  color: var(--accent-blue);
+}
+
+.campoIcone input {
+  width: 100%;
+  padding-left: 48px;
 }
 
 .brand {
@@ -114,30 +103,30 @@
   object-fit: contain;
 }
 
-.systemName {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--accent-blue);
-  margin-top: 12px;
+/* Cabeçalho do card: logo do Cedro centralizada, título alinhado à esquerda */
+.logoTopo {
+  display: block;
+  width: 190px;
+  height: auto;
+  margin: 0 auto 24px;
 }
 
 .titulo {
-  text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .titulo h1 {
-  font-size: 20px;
+  font-size: 34px;
   font-weight: 700;
+  line-height: 1.15;
   letter-spacing: -0.01em;
-  margin-bottom: 4px;
+  color: var(--accent-blue);
+  margin-bottom: 6px;
 }
 
 .titulo p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 /* Botões de setor: cada um usa a própria cor (--cor-setor, definida no style do botão) */
@@ -145,7 +134,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 8px 0 24px;
+  margin: 8px 0 22px;
 }
 
 .setorBotao {
@@ -156,19 +145,20 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 12px;
-  border: 1.5px solid var(--border-color);
+  padding: 11px 12px;
+  border: 1px solid var(--border-color-hover);
   border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  background: var(--bg-secondary);
+  background: rgba(240, 244, 242, 0.55);
   transition: border-color var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .setorBotao:hover {
   border-color: var(--cor-setor);
   color: var(--cor-setor);
+  background: var(--bg-secondary);
 }
 
 .setorBotao:focus-visible {
@@ -189,7 +179,14 @@
   gap: 20px;
 }
 
-/* Rótulo do campo com um link à direita (ex.: "Esqueceu a senha?") */
+/* Linha abaixo da senha com o link "Esqueci minha senha" à direita */
+.linhaSenha {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
+
+/* Rótulo do campo com um link à direita (usado nas outras telas) */
 .labelLinha {
   display: flex;
   justify-content: space-between;
@@ -198,7 +195,7 @@
 }
 
 .forgotPassword {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--accent-blue);
   transition: color var(--transition-fast);
@@ -215,19 +212,16 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 14px;
-  margin-top: 4px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 17px;
+  font-size: 15px;
+  font-weight: 700;
   border-radius: var(--radius-md);
   border: none;
-  background: var(--gradient-blue);
+  background: var(--accent-blue);
   color: #fff;
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
-  box-shadow: 0 4px 15px rgba(7, 86, 24, 0.25);
+  transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
+  box-shadow: 0 10px 24px rgba(7, 86, 24, 0.25);
 }
 
 .loginBtn svg {
@@ -236,29 +230,15 @@
   flex-shrink: 0;
 }
 
-.loginBtn::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-  pointer-events: none;
-}
-
 .loginBtn:hover:not(:disabled) {
+  background: var(--accent-blue-hover);
   transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(7, 86, 24, 0.35);
-}
-
-.loginBtn:hover:not(:disabled)::after {
-  animation: btnShimmer 0.6s ease;
+  box-shadow: 0 14px 30px rgba(7, 86, 24, 0.3);
 }
 
 .loginBtn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(7, 86, 24, 0.2);
+  box-shadow: 0 4px 12px rgba(7, 86, 24, 0.2);
 }
 
 .loginBtn:focus-visible {
@@ -278,7 +258,16 @@
   color: var(--text-muted);
 }
 
+/* O último texto do card vira o rodapé, separado por uma linha e encostado nas bordas */
+.footer:last-child {
+  margin: 32px calc(-1 * var(--respiro)) 0;
+  padding: 24px var(--respiro);
+  border-top: 1px solid var(--border-color);
+  background: rgba(240, 244, 242, 0.5);
+}
+
 .footer a {
+  margin-left: 4px;
   font-weight: 600;
   color: var(--accent-blue);
   transition: color var(--transition-fast);
@@ -318,29 +307,17 @@
 @keyframes cardIn {
   from {
     opacity: 0;
-    transform: translateY(24px) scale(0.97);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
-}
-
-@keyframes breathe {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
-  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-}
-
-@keyframes btnShimmer {
-  from { left: -100%; }
-  to { left: 100%; }
 }
 
 /* Quem pede menos movimento no sistema operacional não vê as animações decorativas */
 @media (prefers-reduced-motion: reduce) {
-  .loginContainer::after,
-  .loginCard,
-  .loginBtn:hover:not(:disabled)::after {
+  .loginCard {
     animation: none;
   }
 
@@ -349,13 +326,55 @@
   }
 }
 
-@media (max-width: 480px) {
+/* Telas baixas (ex.: notebook 1366×768): card mais compacto para caber sem rolagem */
+@media (max-height: 820px) {
   .loginContainer {
-    padding: 16px;
+    padding-top: 24px;
+    padding-bottom: 24px;
   }
 
   .loginCard {
-    padding: 32px 20px;
+    padding-top: 28px;
+  }
+
+  .logoTopo {
+    width: 160px;
+    margin-bottom: 16px;
+  }
+
+  .titulo {
+    margin-bottom: 20px;
+  }
+
+  .form {
+    gap: 16px;
+  }
+
+  .loginCard input,
+  .loginCard select {
+    padding-top: 13px;
+    padding-bottom: 13px;
+  }
+
+  .footer:last-child {
+    margin-top: 24px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .loginContainer {
+    padding: 24px 16px;
+  }
+
+  .loginCard {
+    --respiro: 22px;
+    padding-top: 32px;
     border-radius: var(--radius-lg);
+  }
+
+  .titulo h1 {
+    font-size: 28px;
   }
 }

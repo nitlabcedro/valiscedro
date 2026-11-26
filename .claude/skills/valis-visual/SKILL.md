@@ -5,7 +5,7 @@ description: Padrão visual do sistema Valis (valis-app, Next.js + CSS Modules).
 
 # Padrão visual do Valis
 
-O Valis é um sistema interno de laboratório (setores como imuno e hemato) com visual limpo: fundo verde-acinzentado claro, cards brancos, verde-escuro `#075618` como cor da marca, fonte Inter, textos em português. A meta desta skill é que qualquer tela nova pareça ter sido feita pela mesma pessoa que fez as outras — e que o código visual fique num lugar só, para que mudar uma cor ou um botão no futuro seja mexer em um arquivo, não em vinte.
+O Valis é um sistema interno de laboratório (setores como imuno e hemato) com visual limpo: fundo verde-acinzentado claro, cards brancos, verde-escuro `#075618` como cor da marca, fonte Roboto (via `next/font` em `lib/fonte.ts`, token `--font-sans`), textos em português. A meta desta skill é que qualquer tela nova pareça ter sido feita pela mesma pessoa que fez as outras — e que o código visual fique num lugar só, para que mudar uma cor ou um botão no futuro seja mexer em um arquivo, não em vinte.
 
 ## Fontes da verdade (leia antes de escrever CSS)
 

@@ -217,35 +217,66 @@
 
 .formInput {
   padding: 10px 14px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-input);
   font-size: 14px;
+  line-height: 1.5;
   color: var(--text-primary);
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
   outline: none;
+}
+
+.formInput::placeholder {
+  color: var(--text-placeholder);
+  opacity: 1;
+}
+
+.formInput:hover:not(:disabled):not([readonly]) {
+  border-color: var(--border-input-hover);
 }
 
 .formInput:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(7, 86, 24, 0.1);
+  box-shadow: var(--shadow-input), var(--focus-ring);
+}
+
+.formInput:disabled,
+.formInput[readonly] {
+  background-color: var(--bg-input-disabled);
+  border-color: var(--border-color-hover);
+  box-shadow: none;
+  color: var(--text-secondary);
+}
+
+.formInput:disabled {
+  cursor: not-allowed;
 }
 
 .formInput[aria-invalid="true"] {
   border-color: var(--accent-red);
+  background-color: rgba(239, 68, 68, 0.04);
 }
 
 .formInput[aria-invalid="true"]:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  box-shadow: var(--shadow-input), var(--focus-ring-error);
 }
 
 .formSelect {
   composes: formInput;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236b7a72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
-  padding-right: 36px;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.formSelect:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23075618' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 .formTextarea {
@@ -270,14 +301,24 @@
   gap: 10px;
   padding: 10px 16px;
   background: var(--bg-input);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-input);
   margin-bottom: 20px;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.searchBar:hover {
+  border-color: var(--border-input-hover);
 }
 
 .searchBar:focus-within {
   border-color: var(--accent-blue);
+  box-shadow: var(--shadow-input), var(--focus-ring);
+}
+
+.searchBar:focus-within .searchIcon {
+  color: var(--accent-blue);
 }
 
 .searchBar input {
@@ -290,7 +331,7 @@
 }
 
 .searchBar input::placeholder {
-  color: var(--text-muted);
+  color: var(--text-placeholder);
 }
 
 .searchIcon {
