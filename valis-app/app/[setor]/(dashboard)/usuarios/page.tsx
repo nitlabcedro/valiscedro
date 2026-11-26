@@ -8,6 +8,7 @@ import {
   HiOutlineMagnifyingGlass,
   HiOutlinePencilSquare,
   HiOutlineTrash,
+  HiOutlineKey,
 } from "react-icons/hi2";
 import s from "@/styles/shared.module.css";
 import { isCoordenador, useAuth } from "@/components/AuthProvider/AuthProvider";
@@ -91,6 +92,20 @@ export default function UsuariosPage() {
       await apiSend("DELETE", `/usuarios/${id}`);
       notificar.sucesso("Usuário excluído.");
       list.reload();
+    } catch (erroCapturado) {
+      notificar.erro(mensagemErro(erroCapturado));
+    }
+  }
+
+  async function resetarSenha(alvo: UsuarioLista) {
+    const ok = await confirmar(
+      `Voltar a senha de ${alvo.nome} para a senha padrão? A pessoa será desconectada e terá que entrar com a senha padrão.`,
+      "Resetar senha",
+    );
+    if (!ok) return;
+    try {
+      await apiSend("POST", `/usuarios/${alvo.id}/resetar-senha`);
+      notificar.sucesso("Senha redefinida para a senha padrão.");
     } catch (erroCapturado) {
       notificar.erro(mensagemErro(erroCapturado));
     }
@@ -203,7 +218,10 @@ export default function UsuariosPage() {
                         <>
                           <button type="button" className={s.iconBtn} title="Editar" onClick={() => abrirEdicao(u.id)}><HiOutlinePencilSquare /></button>
                           {u.id !== usuario?.id && (
-                            <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(u.id)}><HiOutlineTrash /></button>
+                            <>
+                              <button type="button" className={s.iconBtn} title="Resetar senha" aria-label={`Resetar senha de ${u.nome}`} onClick={() => resetarSenha(u)}><HiOutlineKey /></button>
+                              <button type="button" className={s.iconBtn} title="Excluir" onClick={() => excluir(u.id)}><HiOutlineTrash /></button>
+                            </>
                           )}
                         </>
                       ) : (
